@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import LinkConverter from '../components/LinkConverter';
+import CommunityLinks from '../components/CommunityLinks';
 
 const steps = [
   {
@@ -35,8 +36,11 @@ export default function Guide() {
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-3xl font-extrabold">Hướng dẫn hoàn tiền</h1>
         <p className="mt-2 text-slate-500">
-          Không cần Open API — link an_redir + khai báo đơn + hold an toàn
+          Không cần Open API — link an_redir + sub_id + hold an toàn
         </p>
+        <div className="mt-4 flex justify-center">
+          <CommunityLinks />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-5">
@@ -71,7 +75,7 @@ export default function Guide() {
               </li>
               <li>Bấm « Tạo mã liên kết Telegram »</li>
               <li>
-                Mở bot{' '}
+                Mở bot Telegram (nút cộng đồng phía trên / Dashboard) — mặc định{' '}
                 <a
                   href="https://t.me/hoantienvn_shopee_bot"
                   className="text-sky-600 font-semibold underline"

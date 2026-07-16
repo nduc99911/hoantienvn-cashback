@@ -17,7 +17,24 @@ router.get('/config', (_req, res) => {
       lazada: getSetting('enable_lazada', '1') === '1',
     },
     support: {
-      zalo: getSetting('support_zalo', '') || process.env.SUPPORT_ZALO || '',
+      zalo:
+        getSetting('support_zalo', '') ||
+        process.env.SUPPORT_ZALO ||
+        'https://zalo.me/g/wuoswofxgroqafas0oxe',
+      zaloGroup:
+        getSetting('support_zalo_group', '') ||
+        process.env.SUPPORT_ZALO_GROUP ||
+        getSetting('support_zalo', '') ||
+        process.env.SUPPORT_ZALO ||
+        'https://zalo.me/g/wuoswofxgroqafas0oxe',
+      telegram:
+        getSetting('support_telegram', '') ||
+        process.env.SUPPORT_TELEGRAM ||
+        'https://t.me/hoantienvn_shopee_bot',
+      telegramBot:
+        getSetting('support_telegram_bot', '') ||
+        process.env.SUPPORT_TELEGRAM_BOT ||
+        'hoantienvn_shopee_bot',
       phone: getSetting('support_phone', '') || process.env.SUPPORT_PHONE || '',
       email: getSetting('support_email', 'hotro@hoantien.vn'),
       facebook:

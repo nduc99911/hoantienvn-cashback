@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { formatVnd, notifApi } from '../lib/api';
+import CommunityLinks from './CommunityLinks';
 
 const navCls = ({ isActive }) =>
   `px-3 py-2 rounded-lg text-sm font-medium transition ${
@@ -244,12 +245,15 @@ export default function Layout() {
               </ul>
             </div>
             <div>
-              <div className="mb-2 font-semibold">Hỗ trợ</div>
-              <p className="text-sm text-slate-500">Zalo / Hotline cấu hình trong Admin</p>
+              <div className="mb-2 font-semibold">Cộng đồng & hỗ trợ</div>
+              <CommunityLinks variant="stack" className="mb-2" />
               <p className="mt-1 text-sm text-slate-500">
                 <a href="mailto:hotro@hoantien.vn" className="hover:text-shopee">
                   hotro@hoantien.vn
                 </a>
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Link Telegram / Zalo chỉnh trong Admin → Cấu hình
               </p>
             </div>
           </div>

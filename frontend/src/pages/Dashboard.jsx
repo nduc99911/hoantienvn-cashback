@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkConverter from '../components/LinkConverter';
 import { formatVnd, walletApi, linksApi, telegramApi, zaloApi } from '../lib/api';
+import CommunityLinks from '../components/CommunityLinks';
 
 export default function Dashboard() {
   const { user, refresh } = useAuth();
@@ -158,6 +159,16 @@ export default function Dashboard() {
       <div className="card">
         <h2 className="mb-3 font-bold text-lg">Lấy link hoàn tiền</h2>
         <LinkConverter compact />
+      </div>
+
+      <div className="card flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-lg">Cộng đồng</h2>
+          <p className="text-sm text-slate-500">
+            Bot Telegram + nhóm Zalo (link đổi được trong Admin)
+          </p>
+        </div>
+        <CommunityLinks />
       </div>
 
       {/* Hướng dẫn liên kết bot */}

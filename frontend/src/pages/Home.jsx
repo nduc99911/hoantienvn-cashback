@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import LinkConverter from '../components/LinkConverter';
 import TipsModal, { openTipsAgain } from '../components/TipsModal';
 import { formatVnd, publicApi, vouchersApi } from '../lib/api';
+import CommunityLinks from '../components/CommunityLinks';
 
 const steps = [
   {
@@ -128,6 +129,13 @@ export default function Home() {
             <Link to="/register" className="font-semibold text-shopee hover:underline">
               Đăng ký miễn phí
             </Link>
+          </div>
+
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              Tham gia cộng đồng
+            </p>
+            <CommunityLinks />
           </div>
         </div>
       </section>

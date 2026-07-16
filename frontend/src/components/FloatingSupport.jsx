@@ -1,8 +1,17 @@
 import { useEffect, useState } from 'react';
 import { publicApi } from '../lib/api';
+import { telegramHref, zaloGroupHref } from './CommunityLinks';
 
 export default function FloatingSupport() {
-  const [s, setS] = useState({ zalo: '', phone: '', messenger: '', facebook: '' });
+  const [s, setS] = useState({
+    zalo: '',
+    zaloGroup: '',
+    telegram: '',
+    telegramBot: '',
+    phone: '',
+    messenger: '',
+    facebook: '',
+  });
 
   useEffect(() => {
     publicApi
@@ -10,6 +19,9 @@ export default function FloatingSupport() {
       .then((c) =>
         setS({
           zalo: c.support?.zalo || '',
+          zaloGroup: c.support?.zaloGroup || '',
+          telegram: c.support?.telegram || '',
+          telegramBot: c.support?.telegramBot || '',
           phone: c.support?.phone || '',
           messenger: c.support?.messenger || '',
           facebook: c.support?.facebook || '',
@@ -27,7 +39,16 @@ export default function FloatingSupport() {
       cls: 'bg-emerald-500',
     });
   }
-  if (s.zalo) {
+
+  const zg = zaloGroupHref(s);
+  if (zg) {
+    items.push({
+      href: zg,
+      label: 'Zalo',
+      emoji: '💬',
+      cls: 'bg-sky-500',
+    });
+  } else if (s.zalo) {
     items.push({
       href: s.zalo.startsWith('http') ? s.zalo : `https://zalo.me/${s.zalo}`,
       label: 'Zalo',
@@ -35,6 +56,17 @@ export default function FloatingSupport() {
       cls: 'bg-sky-500',
     });
   }
+
+  const tg = telegramHref(s);
+  if (tg) {
+    items.push({
+      href: tg,
+      label: 'Tele',
+      emoji: '✈️',
+      cls: 'bg-[#229ED9]',
+    });
+  }
+
   if (s.messenger) {
     items.push({
       href: s.messenger,
