@@ -4,28 +4,28 @@ import LinkConverter from '../components/LinkConverter';
 const steps = [
   {
     n: 1,
-    t: 'Copy link sản phẩm Shopee',
-    d: 'Mở app/web Shopee → sản phẩm → Chia sẻ → Sao chép liên kết.',
+    t: 'Đăng ký / login web',
+    d: 'Tạo tài khoản email hoặc Google trên website — đây là ví chính của bạn.',
   },
   {
     n: 2,
-    t: 'Dán vào HoanTienVN',
-    d: 'Hệ thống parse shop/item → tạo s.shopee.vn/an_redir với affiliate_id của nền tảng + sub_id của bạn.',
+    t: 'Lấy link hoàn tiền',
+    d: 'Dán link Shopee trên web, Telegram hoặc Zalo bot (đã liên kết). Hệ thống gắn sub_id của bạn.',
   },
   {
     n: 3,
-    t: 'Click short link / an_redir và mua',
+    t: 'Click link aff và mua',
     d: 'Giỏ trống SP đó, không click aff khác, thanh toán trong 20–30 phút, tắt Adblock.',
   },
   {
     n: 4,
-    t: 'Khai báo mã đơn',
-    d: 'Nhận hàng → Tôi → Đơn mua → copy Mã đơn → form Khai báo. Admin đối soát.',
+    t: 'Đơn vào ví (auto / import)',
+    d: 'Mua đúng link → admin import báo cáo Aff theo sub_id. Có thể báo đơn thiếu nếu cần.',
   },
   {
     n: 5,
-    t: 'Hold → vào ví → rút',
-    d: 'Duyệt xong tiền hold (mặc định 7 ngày) rồi vào số dư khả dụng. Rút bank/MoMo từ 50.000đ.',
+    t: 'Hold → rút tiền',
+    d: 'Hold mặc định 7 ngày rồi vào số dư. Rút bank/MoMo từ mức tối thiểu trên web.',
   },
 ];
 
@@ -51,6 +51,70 @@ export default function Guide() {
         ))}
       </div>
 
+      <div className="card shadow-soft space-y-4">
+        <h2 className="font-bold text-lg">Liên kết bot Telegram / Zalo</h2>
+        <p className="text-sm text-slate-500">
+          Để chat bot và website dùng <b>cùng một ví</b>, luôn đăng ký web trước rồi
+          gắn bot bằng mã 6 số.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-sky-100 dark:border-sky-900 p-4">
+            <h3 className="font-bold text-sky-700 dark:text-sky-300">
+              ✈️ Telegram
+            </h3>
+            <ol className="mt-2 text-sm space-y-1.5 list-decimal list-inside text-slate-600 dark:text-slate-300">
+              <li>
+                Login web →{' '}
+                <Link to="/dashboard" className="text-shopee font-semibold">
+                  Dashboard
+                </Link>
+              </li>
+              <li>Bấm « Tạo mã liên kết Telegram »</li>
+              <li>
+                Mở bot{' '}
+                <a
+                  href="https://t.me/hoantienvn_shopee_bot"
+                  className="text-sky-600 font-semibold underline"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  @hoantienvn_shopee_bot
+                </a>
+              </li>
+              <li>
+                Gửi: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">/lienket 123456</code>{' '}
+                (có dấu <b>/</b>)
+              </li>
+              <li>Thấy ✅ Đã liên kết → dán link Shopee thoải mái</li>
+            </ol>
+          </div>
+          <div className="rounded-xl border border-blue-100 dark:border-blue-900 p-4">
+            <h3 className="font-bold text-blue-700 dark:text-blue-300">
+              💬 Zalo
+            </h3>
+            <ol className="mt-2 text-sm space-y-1.5 list-decimal list-inside text-slate-600 dark:text-slate-300">
+              <li>
+                Login web →{' '}
+                <Link to="/dashboard" className="text-shopee font-semibold">
+                  Dashboard
+                </Link>
+              </li>
+              <li>Bấm « Tạo mã liên kết Zalo »</li>
+              <li>Kết bạn acc bot Zalo (xem support / admin)</li>
+              <li>
+                Gửi: <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded">lienket 123456</code>{' '}
+                (<b>không</b> có dấu /)
+              </li>
+              <li>Thấy ✅ Đã liên kết → cùng ví với web</li>
+            </ol>
+          </div>
+        </div>
+        <p className="text-xs text-amber-700 dark:text-amber-300">
+          Chỉ gõ <b>dangky</b> trên bot mà không lienket → tài khoản ẩn, không đăng
+          nhập web được. Muốn web: đăng ký site rồi lienket.
+        </p>
+      </div>
+
       <div className="card shadow-soft">
         <h2 className="font-bold text-lg mb-3">Thử lấy link ngay</h2>
         <LinkConverter />
@@ -60,8 +124,11 @@ export default function Guide() {
         <Link to="/register" className="btn-primary">
           Đăng ký miễn phí
         </Link>
+        <Link to="/dashboard" className="btn-secondary">
+          Dashboard / liên kết bot
+        </Link>
         <Link to="/claim" className="btn-secondary">
-          Khai báo đơn
+          Báo đơn thiếu
         </Link>
         <Link to="/terms" className="btn-secondary">
           Điều khoản

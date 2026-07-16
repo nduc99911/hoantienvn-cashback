@@ -160,13 +160,54 @@ export default function Dashboard() {
         <LinkConverter compact />
       </div>
 
+      {/* Hướng dẫn liên kết bot */}
+      <div className="card bg-slate-50 dark:bg-slate-900/40 border-dashed">
+        <h2 className="font-bold text-lg">📌 Liên kết bot với tài khoản web</h2>
+        <p className="text-sm text-slate-500 mt-1">
+          Đăng ký / login web trước → tạo mã → gửi bot. Sau đó ví web = ví bot (cùng
+          sub_id, đơn, rút tiền).
+        </p>
+        <ol className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300 list-decimal list-inside">
+          <li>
+            Bạn đã đăng nhập web — giữ nguyên tài khoản email/Google này.
+          </li>
+          <li>
+            Chọn kênh bên dưới → bấm <b>Tạo mã liên kết</b> (mã 6 số, dùng 1 lần).
+          </li>
+          <li>
+            <b>Telegram:</b> mở bot → gửi{' '}
+            <code className="rounded bg-white dark:bg-slate-800 px-1">
+              /lienket 123456
+            </code>
+          </li>
+          <li>
+            <b>Zalo:</b> kết bạn acc bot → gửi{' '}
+            <code className="rounded bg-white dark:bg-slate-800 px-1">
+              lienket 123456
+            </code>{' '}
+            (không có dấu /).
+          </li>
+          <li>Thấy ✅ Đã liên kết → dán link Shopee trên bot là cộng vào ví web.</li>
+        </ol>
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+          Lưu ý: chỉ chat bot <b>dangky</b> mà không lienket thì có acc ẩn —{' '}
+          <b>không login web được</b>. Muốn dùng web: đăng ký web rồi lienket.
+        </p>
+        <p className="mt-1 text-xs text-slate-400">
+          Xem thêm:{' '}
+          <Link to="/guide" className="text-shopee font-semibold hover:underline">
+            Hướng dẫn hoàn tiền
+          </Link>
+        </p>
+      </div>
+
       {/* Telegram bot */}
       <div className="card border-sky-100 dark:border-sky-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="font-bold text-lg">✈️ Bot Telegram</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Chat bot → dán link Shopee → nhận link hoàn tiền. Không cần Zalo OA.
+              Chat bot → dán link Shopee → nhận link hoàn tiền.
             </p>
             {tgBot?.deepLink && (
               <a
@@ -184,19 +225,59 @@ export default function Dashboard() {
                 {tg.telegramName ? ` (${tg.telegramName})` : ''}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-amber-600">
-                Chưa liên kết — tạo mã rồi gõ bot: <b>/lienket xxxxxx</b>
-              </p>
+              <ol className="mt-2 text-sm text-slate-600 dark:text-slate-300 space-y-1 list-decimal list-inside">
+                <li>Bấm « Tạo mã liên kết Telegram »</li>
+                <li>
+                  Mở{' '}
+                  {tgBot?.deepLink ? (
+                    <a
+                      href={tgBot.deepLink}
+                      className="text-sky-600 font-semibold underline"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      @{tgBot.bot?.username || 'bot'}
+                    </a>
+                  ) : (
+                    'bot Telegram'
+                  )}
+                </li>
+                <li>
+                  Gửi: <b>/lienket</b> + mã 6 số (có dấu /)
+                </li>
+              </ol>
             )}
             {bindCode && (
-              <p className="mt-2 font-mono text-xl font-black text-sky-600">
-                /lienket {bindCode}
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="font-mono text-xl font-black text-sky-600">
+                  /lienket {bindCode}
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary !py-1 !px-2 text-xs"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`/lienket ${bindCode}`);
+                    setMsg('Đã copy lệnh Telegram — dán vào bot');
+                  }}
+                >
+                  Copy lệnh
+                </button>
+                {tgBot?.deepLink && (
+                  <a
+                    href={tgBot.deepLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-primary !py-1 !px-3 text-xs"
+                  >
+                    Mở bot
+                  </a>
+                )}
+              </div>
             )}
           </div>
           <button
             type="button"
-            className="btn-secondary !py-2 text-sm"
+            className="btn-secondary !py-2 text-sm shrink-0"
             onClick={genTgCode}
             disabled={busy}
           >
@@ -204,7 +285,7 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="mt-3 text-xs text-slate-400">
-          Lệnh: dán link Shopee · /sodu · /subid · /don · /menu
+          Lệnh bot: dán link Shopee · /sodu · /subid · /don · /menu · /lienket
           {!tg?.botEnabled && !tgBot?.enabled && (
             <span className="text-amber-600">
               {' '}
@@ -217,11 +298,10 @@ export default function Dashboard() {
       {/* Zalo personal bot */}
       <div className="card border-blue-100 dark:border-blue-900">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="font-bold text-lg">💬 Bot Zalo</h2>
             <p className="text-sm text-slate-500 mt-1">
-              Nhắn acc bot Zalo → dán link Shopee → nhận link hoàn tiền. Cùng ví với
-              web khi đã liên kết.
+              Nhắn acc bot Zalo → dán link Shopee. Cùng ví web khi đã liên kết.
             </p>
             {zalo?.linked ? (
               <p className="mt-2 text-sm text-emerald-600 font-semibold">
@@ -229,25 +309,35 @@ export default function Dashboard() {
                 {zalo.zaloName ? ` (${zalo.zaloName})` : ''}
               </p>
             ) : (
-              <p className="mt-2 text-sm text-amber-600">
-                Chưa liên kết — tạo mã rồi nhắn bot:{' '}
-                <b>lienket xxxxxx</b>
-              </p>
+              <ol className="mt-2 text-sm text-slate-600 dark:text-slate-300 space-y-1 list-decimal list-inside">
+                <li>Bấm « Tạo mã liên kết Zalo »</li>
+                <li>Kết bạn acc bot Zalo (hỏi admin / support nếu chưa biết)</li>
+                <li>
+                  Gửi: <b>lienket</b> + mã 6 số <b>không</b> có dấu /
+                </li>
+              </ol>
             )}
             {zaloBindCode && (
-              <div className="mt-2">
+              <div className="mt-3 flex flex-wrap items-center gap-2">
                 <p className="font-mono text-xl font-black text-blue-600">
                   lienket {zaloBindCode}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">
-                  Copy tin trên → gửi cho acc bot Zalo (kết bạn trước nếu cần)
-                </p>
+                <button
+                  type="button"
+                  className="btn-secondary !py-1 !px-2 text-xs"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`lienket ${zaloBindCode}`);
+                    setMsg('Đã copy lệnh Zalo — dán vào chat bot');
+                  }}
+                >
+                  Copy lệnh
+                </button>
               </div>
             )}
           </div>
           <button
             type="button"
-            className="btn-secondary !py-2 text-sm"
+            className="btn-secondary !py-2 text-sm shrink-0"
             onClick={genZaloCode}
             disabled={busy}
           >
@@ -255,7 +345,7 @@ export default function Dashboard() {
           </button>
         </div>
         <div className="mt-3 text-xs text-slate-400">
-          Lệnh: dán link Shopee · menu · sodu · subid · don · lienket · dangky
+          Lệnh: dán link · menu · sodu · subid · don · lienket · dangky
           {zaloBot && !zaloBot.online && (
             <span className="text-amber-600">
               {' '}

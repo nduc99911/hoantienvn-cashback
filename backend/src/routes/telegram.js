@@ -40,10 +40,25 @@ router.get('/status', async (_req, res) => {
 });
 
 router.post('/bind-code', requireAuth, async (req, res) => {
-  const code = createTelegramBindCode(req.user.id);
+  const code = await createTelegramBindCode(req.user.id);
+  const me = await getMe();
+  const deepLink = me?.username ? `https://t.me/${me.username}` : null;
   res.json({
     code,
-    instruction: `Mở bot Telegram → gõ: /lienket ${code}`,
+    command: `/lienket ${code}`,
+    deepLink,
+    instruction: deepLink
+      ? `Mở ${deepLink} → gõ: /lienket ${code}`
+      : `Mở bot Telegram → gõ: /lienket ${code}`,
+    howTo: [
+      '1. Đăng nhập web HoanTienVN (bạn đang ở đây)',
+      '2. Bấm « Tạo mã liên kết Telegram » trên Dashboard',
+      deepLink
+        ? `3. Mở bot: ${deepLink} (hoặc tìm @${me.username})`
+        : '3. Mở bot Telegram HoanTienVN',
+      `4. Gửi đúng: /lienket ${code}`,
+      '5. Thấy ✅ Đã liên kết → cùng ví với web',
+    ],
   });
 });
 

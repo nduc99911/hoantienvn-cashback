@@ -35,9 +35,13 @@ function menuText() {
     `💰 sodu — số dư ví\n` +
     `🏷 subid — mã tracking Aff\n` +
     `📦 don — đơn gần đây\n` +
-    `🔑 lienket <mã6số> — gắn TK web\n` +
-    `📝 dangky — tạo TK nhanh\n` +
+    `🔑 lienket 123456 — gắn TK web (mã 6 số từ Dashboard)\n` +
+    `📝 dangky — tạo TK nhanh (chỉ bot; login web cần liên kết)\n` +
     `❓ menu — menu này\n\n` +
+    `Liên kết web:\n` +
+    `1) Login web → Dashboard → Tạo mã Zalo\n` +
+    `2) Gửi: lienket xxxxxx\n` +
+    `→ Cùng ví / sub_id với website\n\n` +
     `Mẹo: chỉ cần dán link shopee.vn!`
   );
 }
