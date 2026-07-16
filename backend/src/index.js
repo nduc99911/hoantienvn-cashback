@@ -16,6 +16,8 @@ import notifRoutes from './routes/notifications.js';
 import publicRoutes from './routes/public.js';
 import zaloRoutes from './routes/zalo.js';
 import telegramRoutes from './routes/telegram.js';
+import voucherRoutes from './routes/vouchers.js';
+import googleAuthRoutes from './routes/googleAuth.js';
 import { describeAffiliateSetup } from './services/affiliate.js';
 import { buildOutboundUrl } from './services/affiliate.js';
 import { releaseHeldOrders } from './services/wallet.js';
@@ -111,6 +113,8 @@ app.use('/api/notifications', notifRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/zalo', zaloRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/vouchers', voucherRoutes);
+app.use('/api/auth/google', googleAuthRoutes);
 
 app.get('/r/:code', async (req, res) => {
   try {

@@ -1,12 +1,19 @@
 import { useEffect, useState } from 'react';
-import { walletApi } from '../lib/api';
+import { publicApi, walletApi } from '../lib/api';
 
 export default function Referrals() {
   const [data, setData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [rates, setRates] = useState({ f1: 0.2, f2: 0.1 });
 
   useEffect(() => {
     walletApi.referrals().then(setData).catch(console.error);
+    publicApi
+      .config()
+      .then((c) =>
+        setRates({ f1: c.f1Rate ?? 0.2, f2: c.f2Rate ?? 0.1 })
+      )
+      .catch(() => {});
   }, []);
 
   if (!data) {
@@ -18,6 +25,8 @@ export default function Referrals() {
   }
 
   const link = `${window.location.origin}/register?ref=${data.referralCode}`;
+  const f1p = Math.round(rates.f1 * 100);
+  const f2p = Math.round(rates.f2 * 100);
 
   async function copy() {
     await navigator.clipboard.writeText(link);
@@ -26,12 +35,13 @@ export default function Referrals() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 space-y-8 pb-20 md:pb-8">
       <div>
         <h1 className="text-2xl font-extrabold">Giới thiệu bạn bè</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Nhận <b className="text-shopee">5% F1</b> và <b className="text-shopee">2% F2</b>{' '}
-          trên tiền hoàn của tuyến dưới — thu nhập trọn đời.
+          Nhận <b className="text-shopee">{f1p}% F1</b> và{' '}
+          <b className="text-shopee">{f2p}% F2</b> trên tiền hoàn của tuyến dưới — thu
+          nhập trọn đời.
         </p>
       </div>
 
@@ -60,17 +70,17 @@ export default function Referrals() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="card">
-          <h3 className="font-bold mb-2">F1 — 5%</h3>
+          <h3 className="font-bold mb-2">F1 — {f1p}%</h3>
           <p className="text-sm text-slate-500">
-            Bạn bè đăng ký bằng link/mã của bạn. Mỗi khi họ được hoàn tiền, bạn nhận 5% số
-            tiền hoàn đó.
+            Bạn bè đăng ký bằng link/mã của bạn. Mỗi khi họ được hoàn tiền, bạn nhận {f1p}%
+            số tiền hoàn đó.
           </p>
         </div>
         <div className="card">
-          <h3 className="font-bold mb-2">F2 — 2%</h3>
+          <h3 className="font-bold mb-2">F2 — {f2p}%</h3>
           <p className="text-sm text-slate-500">
-            Người do F1 mời tiếp. Bạn nhận 2% trên hoàn tiền của F2 — thu nhập thụ động 2
-            tầng.
+            Người do F1 mời tiếp. Bạn nhận {f2p}% trên hoàn tiền của F2 — thu nhập thụ động
+            2 tầng.
           </p>
         </div>
       </div>

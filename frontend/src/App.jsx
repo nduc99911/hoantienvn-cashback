@@ -18,6 +18,10 @@ import Cookies from './pages/Cookies';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import SeoHead from './components/SeoHead';
+import AuthCallback from './pages/AuthCallback';
+import FloatingSupport from './components/FloatingSupport';
+import MobileBottomNav from './components/MobileBottomNav';
+import PwaInstall from './components/PwaInstall';
 
 function Private({ children }) {
   const { user, loading } = useAuth();
@@ -39,6 +43,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="auth/callback" element={<AuthCallback />} />
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password" element={<ResetPassword />} />
         <Route path="guide" element={<Guide />} />
@@ -98,6 +103,9 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+      <FloatingSupport />
+      <MobileBottomNav />
+      <PwaInstall />
     </>
   );
 }

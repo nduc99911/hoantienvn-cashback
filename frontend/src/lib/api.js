@@ -122,7 +122,9 @@ export const otpApi = {
 };
 
 export const blogApi = {
-  list: () => api('/blog'),
+  list: (category) =>
+    api(category ? `/blog?category=${encodeURIComponent(category)}` : '/blog'),
+  categories: () => api('/blog/categories'),
   get: (slug) => api(`/blog/${slug}`),
   adminAll: () => api('/blog/admin/all'),
   create: (payload) => api('/blog/admin', { method: 'POST', body: payload }),
@@ -139,7 +141,24 @@ export const notifApi = {
 
 export const publicApi = {
   config: () => api('/public/config'),
+  stats: () => api('/public/stats'),
 };
+
+export const vouchersApi = {
+  list: () => api('/vouchers'),
+  adminAll: () => api('/vouchers/admin/all'),
+  create: (payload) =>
+    api('/vouchers/admin', { method: 'POST', body: payload }),
+  update: (id, payload) =>
+    api(`/vouchers/admin/${id}`, { method: 'PUT', body: payload }),
+  remove: (id) => api(`/vouchers/admin/${id}`, { method: 'DELETE' }),
+};
+
+export function googleAuthStartUrl(ref) {
+  const base = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+  const q = ref ? `?ref=${encodeURIComponent(ref)}` : '';
+  return `${base}/api/auth/google/start${q}`;
+}
 
 export const zaloApi = {
   bindCode: () => api('/zalo/bind-code', { method: 'POST' }),

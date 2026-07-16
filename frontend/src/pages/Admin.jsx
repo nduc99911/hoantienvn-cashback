@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { adminApi, blogApi, formatVnd, telegramApi } from '../lib/api';
+import { adminApi, blogApi, formatVnd, telegramApi, vouchersApi } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -13,6 +13,7 @@ const TABS = [
   ['users', 'Users'],
   ['staff', 'Staff/RBAC'],
   ['marketing', 'Email MKT'],
+  ['vouchers', 'Voucher'],
   ['telegram', 'Telegram Bot'],
   ['blog', 'Blog'],
   ['settings', 'Cấu hình'],
@@ -56,6 +57,14 @@ export default function Admin() {
   });
   const [staff, setStaff] = useState([]);
   const [rbac, setRbac] = useState(null);
+  const [vouchers, setVouchers] = useState([]);
+  const [voucherForm, setVoucherForm] = useState({
+    code: '',
+    title: '',
+    discountLabel: 'ƯU ĐÃI',
+    minOrder: 0,
+    maxDiscount: 0,
+  });
 
   if (!STAFF_ROLES.includes(user?.role)) {
     return <Navigate to="/dashboard" replace />;
@@ -108,6 +117,17 @@ export default function Admin() {
       setRbac(rb);
     } catch {
       /* ignore */
+    }
+    try {
+      const vv = await vouchersApi.adminAll();
+      setVouchers(vv.vouchers || []);
+    } catch {
+      try {
+        const vv = await vouchersApi.list();
+        setVouchers(vv.vouchers || []);
+      } catch {
+        /* ignore */
+      }
     }
   }
 
@@ -809,6 +829,86 @@ export default function Admin() {
         </div>
       )}
 
+      {tab === 'vouchers' && (
+        <div className="space-y-4">
+          <form
+            className="card space-y-3 max-w-xl"
+            onSubmit={(e) => {
+              e.preventDefault();
+              act(async () => {
+                await vouchersApi.create(voucherForm);
+                setVoucherForm({
+                  code: '',
+                  title: '',
+                  discountLabel: 'ƯU ĐÃI',
+                  minOrder: 0,
+                  maxDiscount: 0,
+                });
+                await load();
+              }, 'Đã thêm voucher');
+            }}
+          >
+            <h2 className="font-bold">Thêm mã Shopee</h2>
+            <input
+              className="input font-mono"
+              placeholder="MÃ CODE"
+              value={voucherForm.code}
+              onChange={(e) =>
+                setVoucherForm({ ...voucherForm, code: e.target.value })
+              }
+              required
+            />
+            <input
+              className="input"
+              placeholder="Tiêu đề hiển thị"
+              value={voucherForm.title}
+              onChange={(e) =>
+                setVoucherForm({ ...voucherForm, title: e.target.value })
+              }
+              required
+            />
+            <input
+              className="input"
+              placeholder="Nhãn (ƯU ĐÃI 20%)"
+              value={voucherForm.discountLabel}
+              onChange={(e) =>
+                setVoucherForm({ ...voucherForm, discountLabel: e.target.value })
+              }
+            />
+            <button className="btn-primary">Thêm</button>
+          </form>
+          <div className="card !p-0 overflow-hidden">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {vouchers.map((v) => (
+                <li
+                  key={v.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm"
+                >
+                  <div>
+                    <code className="font-bold text-shopee">{v.code}</code>
+                    <div className="text-xs text-slate-500">{v.title}</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-red-500"
+                    onClick={() =>
+                      act(() => vouchersApi.remove(v.id), 'Đã xóa voucher')
+                    }
+                  >
+                    Xóa
+                  </button>
+                </li>
+              ))}
+              {!vouchers.length && (
+                <li className="p-6 text-center text-slate-400 text-sm">
+                  Chưa có voucher — seed mẫu hoặc thêm tay
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {tab === 'blog' && (
         <div className="grid gap-4 lg:grid-cols-2">
           <form
@@ -989,9 +1089,14 @@ export default function Admin() {
             ['admin_bank_account', 'STK admin — số tài khoản (fallback)'],
             ['admin_bank_holder', 'STK admin — chủ TK'],
             ['admin_momo_phone', 'MoMo admin (tham chiếu xử lý rút)'],
-            ['support_zalo', 'Zalo support'],
+            ['support_zalo', 'Zalo (link hoặc SĐT)'],
             ['support_phone', 'Hotline'],
             ['support_email', 'Email support'],
+            ['support_facebook', 'Facebook Fanpage URL'],
+            ['support_messenger', 'Messenger m.me URL'],
+            ['guide_video_url', 'YouTube hướng dẫn (URL)'],
+            ['f1_rate', 'F1 rate (0.20 = 20%)'],
+            ['f2_rate', 'F2 rate (0.10 = 10%)'],
             ['gsc_verification', 'Google Search Console meta content'],
           ].map(([k, label]) => (
             <div key={k}>

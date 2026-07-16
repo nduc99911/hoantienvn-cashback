@@ -179,3 +179,19 @@ CREATE TABLE IF NOT EXISTS email_campaigns (
   created_at TEXT DEFAULT (datetime('now')),
   sent_at TEXT
 );
+CREATE TABLE IF NOT EXISTS vouchers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT DEFAULT 'shopee',
+  code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  discount_label TEXT,
+  min_order REAL DEFAULT 0,
+  max_discount REAL DEFAULT 0,
+  deep_link TEXT,
+  expires_at TEXT,
+  used_percent INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  active INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT (datetime('now'))
+);

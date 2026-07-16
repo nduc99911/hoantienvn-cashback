@@ -183,6 +183,8 @@ async function initSqliteTables() {
   for (const sql of [
     'ALTER TABLE users ADD COLUMN marketing_opt_in INTEGER DEFAULT 1',
     'ALTER TABLE users ADD COLUMN phone_verified INTEGER DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN google_id TEXT',
+    "ALTER TABLE blog_posts ADD COLUMN category TEXT DEFAULT 'Tin tức'",
   ]) {
     try {
       db.exec(sql);
@@ -197,8 +199,12 @@ async function seedDefaults() {
     mode: 'no_api',
     cashback_share_ratio: process.env.CASHBACK_SHARE_RATIO || '0.70',
     default_commission_rate: process.env.DEFAULT_COMMISSION_RATE || '0.12',
-    f1_rate: process.env.F1_COMMISSION_RATE || '0.05',
-    f2_rate: process.env.F2_COMMISSION_RATE || '0.02',
+    f1_rate: process.env.F1_COMMISSION_RATE || '0.20',
+    f2_rate: process.env.F2_COMMISSION_RATE || '0.10',
+    guide_video_url: process.env.GUIDE_VIDEO_URL || '',
+    support_facebook: process.env.SUPPORT_FACEBOOK || '',
+    support_messenger: process.env.SUPPORT_MESSENGER || '',
+    google_client_id: process.env.GOOGLE_CLIENT_ID || '',
     min_withdraw: process.env.MIN_WITHDRAW || '50000',
     site_name: 'HoanTienVN',
     redirect_mode: process.env.REDIRECT_MODE || 'shopee_an_redir',

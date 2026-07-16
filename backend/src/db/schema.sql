@@ -197,6 +197,25 @@ CREATE TABLE IF NOT EXISTS email_campaigns (
 -- cột mở rộng (Postgres)
 ALTER TABLE users ADD COLUMN IF NOT EXISTS marketing_opt_in INTEGER DEFAULT 1;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS phone_verified INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT;
+ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Tin tức';
+
+CREATE TABLE IF NOT EXISTS vouchers (
+  id SERIAL PRIMARY KEY,
+  platform TEXT DEFAULT 'shopee',
+  code TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  discount_label TEXT,
+  min_order DOUBLE PRECISION DEFAULT 0,
+  max_discount DOUBLE PRECISION DEFAULT 0,
+  deep_link TEXT,
+  expires_at TIMESTAMPTZ,
+  used_percent INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  active INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
 CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);

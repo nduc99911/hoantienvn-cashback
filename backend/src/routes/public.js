@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getSetting, many } from '../db/schema.js';
+import { getSetting, many, one } from '../db/schema.js';
 
 const router = Router();
 
@@ -8,8 +8,8 @@ router.get('/config', (_req, res) => {
     siteName: getSetting('site_name', 'HoanTienVN'),
     holdDays: parseInt(getSetting('hold_days', '7'), 10),
     minWithdraw: parseFloat(getSetting('min_withdraw', '50000')),
-    f1Rate: parseFloat(getSetting('f1_rate', '0.05')),
-    f2Rate: parseFloat(getSetting('f2_rate', '0.02')),
+    f1Rate: parseFloat(getSetting('f1_rate', '0.20')),
+    f2Rate: parseFloat(getSetting('f2_rate', '0.10')),
     cashbackShare: parseFloat(getSetting('cashback_share_ratio', '0.70')),
     platforms: {
       shopee: getSetting('enable_shopee', '1') === '1',
@@ -17,21 +17,77 @@ router.get('/config', (_req, res) => {
       lazada: getSetting('enable_lazada', '1') === '1',
     },
     support: {
-      zalo: getSetting('support_zalo', ''),
-      phone: getSetting('support_phone', ''),
+      zalo: getSetting('support_zalo', '') || process.env.SUPPORT_ZALO || '',
+      phone: getSetting('support_phone', '') || process.env.SUPPORT_PHONE || '',
       email: getSetting('support_email', 'hotro@hoantien.vn'),
+      facebook:
+        getSetting('support_facebook', '') ||
+        process.env.SUPPORT_FACEBOOK ||
+        '',
+      messenger:
+        getSetting('support_messenger', '') ||
+        process.env.SUPPORT_MESSENGER ||
+        '',
     },
+    guideVideoUrl:
+      getSetting('guide_video_url', '') || process.env.GUIDE_VIDEO_URL || '',
     claimGuide: getSetting('claim_guide', ''),
     siteUrl: getSetting(
       'site_url',
       process.env.SITE_URL || 'https://hoantienvn.vercel.app'
     ),
-    /** Google Search Console meta content (nếu set) */
     gscVerification:
       getSetting('gsc_verification', '') ||
       process.env.GSC_VERIFICATION ||
       '',
+    googleAuthEnabled: Boolean(
+      (process.env.GOOGLE_CLIENT_ID || getSetting('google_client_id', '')) &&
+        process.env.GOOGLE_CLIENT_SECRET
+    ),
   });
+});
+
+/** Social proof stats */
+router.get('/stats', async (_req, res) => {
+  try {
+    const clicks = Number(
+      (await one('SELECT COUNT(*) as c FROM click_logs'))?.c || 0
+    );
+    const users = Number(
+      (await one(
+        `SELECT COUNT(*) as c FROM users WHERE status = 'active' OR status IS NULL`
+      ))?.c || 0
+    );
+    const paid = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'paid'`
+        )
+      )?.s || 0
+    );
+    const held = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'held'`
+        )
+      )?.s || 0
+    );
+    res.json({
+      clicks,
+      members: users,
+      paidCashback: paid,
+      heldCashback: held,
+      totalCashback: paid + held,
+    });
+  } catch (e) {
+    res.json({
+      clicks: 0,
+      members: 0,
+      paidCashback: 0,
+      heldCashback: 0,
+      totalCashback: 0,
+    });
+  }
 });
 
 router.get('/robots.txt', (_req, res) => {

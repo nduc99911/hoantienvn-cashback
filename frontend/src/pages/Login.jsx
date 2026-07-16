@@ -1,15 +1,26 @@
-import { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { googleAuthStartUrl, publicApi } from '../lib/api';
 
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('demo@hoantien.vn');
   const [password, setPassword] = useState('demo123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleOn, setGoogleOn] = useState(false);
+
+  useEffect(() => {
+    if (params.get('error')) setError(params.get('error'));
+    publicApi
+      .config()
+      .then((c) => setGoogleOn(Boolean(c.googleAuthEnabled)))
+      .catch(() => {});
+  }, [params]);
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -68,6 +79,19 @@ export default function Login() {
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>
         </form>
+        {googleOn && (
+          <a
+            href={googleAuthStartUrl()}
+            className="btn-secondary mt-3 flex w-full items-center justify-center gap-2"
+          >
+            <span>G</span> Tiếp tục với Google
+          </a>
+        )}
+        {!googleOn && (
+          <p className="mt-3 text-center text-xs text-slate-400">
+            Google login: cấu hình GOOGLE_CLIENT_ID/SECRET trên server
+          </p>
+        )}
         <p className="mt-4 text-center text-sm text-slate-500">
           Chưa có tài khoản?{' '}
           <Link to="/register" className="font-semibold text-shopee hover:underline">
