@@ -151,11 +151,8 @@ async function cmdLink(user, url) {
     ]
   );
 
-  const site = (
-    getSetting('site_url', '') ||
-    process.env.PUBLIC_URL ||
-    'http://localhost:5173'
-  ).replace(/\/$/, '');
+  const { shortLinkUrl } = await import('../utils/urls.js');
+  const short = shortLinkUrl(shortCode);
 
   const priceLine =
     result.productPrice != null
@@ -173,7 +170,7 @@ async function cmdLink(user, url) {
     `${cashLine}\n` +
     `🏷 sub_id: <code>${subId}</code>\n\n` +
     `🔗 <b>Mua ngay:</b>\n${outbound}\n\n` +
-    `📎 Short: ${site}/r/${shortCode}\n\n` +
+    `📎 Short: ${short}\n\n` +
     `⚠️ Click link → mua trong 20–30 phút. Không cần khai báo đơn.`
   );
 }

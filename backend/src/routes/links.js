@@ -137,13 +137,13 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
       ]
     );
 
-    const base =
-      process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
+    const { shortLinkUrl } = await import('../utils/urls.js');
+    const shortUrl = shortLinkUrl(shortCode);
 
     res.json({
       id: info.lastInsertRowid,
       shortCode,
-      shortUrl: `${base}/r/${shortCode}`,
+      shortUrl,
       affiliateUrl: outbound,
       originLink,
       subId,

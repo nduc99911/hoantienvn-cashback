@@ -1346,7 +1346,18 @@ export default function Admin() {
             ['support_email', 'Email support'],
             ['support_facebook', 'Facebook Fanpage URL'],
             ['support_messenger', 'Messenger m.me URL'],
-            ['guide_video_url', 'YouTube hướng dẫn (URL)'],
+            [
+              'guide_video_url',
+              'Video trang chủ (YouTube URL hoặc .mp4 public, vd. https://hoantienvn.vercel.app/videos/...)',
+            ],
+            [
+              'site_url',
+              'Website frontend (https://hoantienvn.vercel.app) — KHÔNG dùng localhost',
+            ],
+            [
+              'public_url',
+              'API public (https://hoantienvn-api.onrender.com) — short link /r/xxx',
+            ],
             ['f1_rate', 'F1 rate (0.20 = 20%)'],
             ['f2_rate', 'F2 rate (0.10 = 10%)'],
             ['gsc_verification', 'Google Search Console meta content'],
@@ -1357,6 +1368,15 @@ export default function Admin() {
                 className="input font-mono text-sm"
                 value={settings[k] ?? ''}
                 onChange={(e) => setSettings({ ...settings, [k]: e.target.value })}
+                placeholder={
+                  k === 'guide_video_url'
+                    ? 'https://www.youtube.com/watch?v=... hoặc .mp4'
+                    : k === 'public_url'
+                      ? 'https://hoantienvn-api.onrender.com'
+                      : k === 'site_url'
+                        ? 'https://hoantienvn.vercel.app'
+                        : undefined
+                }
               />
             </div>
           ))}

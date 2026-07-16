@@ -201,7 +201,9 @@ async function seedDefaults() {
     default_commission_rate: process.env.DEFAULT_COMMISSION_RATE || '0.12',
     f1_rate: process.env.F1_COMMISSION_RATE || '0.20',
     f2_rate: process.env.F2_COMMISSION_RATE || '0.10',
-    guide_video_url: process.env.GUIDE_VIDEO_URL || '',
+    guide_video_url:
+      process.env.GUIDE_VIDEO_URL ||
+      'https://hoantienvn.vercel.app/videos/huong-dan-hoan-tien.mp4',
     support_facebook: process.env.SUPPORT_FACEBOOK || '',
     support_messenger: process.env.SUPPORT_MESSENGER || '',
     google_client_id: process.env.GOOGLE_CLIENT_ID || '',
@@ -241,7 +243,13 @@ async function seedDefaults() {
     enable_tiktok: '1',
     enable_lazada: '1',
     site_url:
-      process.env.SITE_URL || process.env.PUBLIC_URL || 'http://localhost:5173',
+      process.env.SITE_URL ||
+      process.env.PUBLIC_URL ||
+      'https://hoantienvn.vercel.app',
+    public_url:
+      process.env.PUBLIC_URL ||
+      process.env.RENDER_EXTERNAL_URL ||
+      'https://hoantienvn-api.onrender.com',
     zalo_oa_access_token: '',
     zalo_bot_enabled: '0',
     zalo_webhook_verify: 'hoantienvn',

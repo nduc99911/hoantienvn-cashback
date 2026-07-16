@@ -173,6 +173,7 @@ router.put('/settings', async (req, res) => {
     'enable_tiktok',
     'enable_lazada',
     'site_url',
+    'public_url',
     'gsc_verification',
     'admin_momo_phone',
     'f1_rate',
