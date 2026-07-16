@@ -30,13 +30,14 @@ npm run zca:refresh
 
 ## Render auto-push
 
-**Nếu chưa có API key**, tool **tự hỏi** khi chạy `npm run zca:refresh`:
+**Nếu chưa có API key**, tool **tự mở trình duyệt** + hỏi khi chạy `npm run zca:refresh`:
 
 1. Hỏi có muốn kết nối Render không (Y/n)
-2. Dán `RENDER_API_KEY` (rnd_…) — link: https://dashboard.render.com/u/settings#api-keys
-3. Kiểm tra key → liệt kê services → chọn số / dán `srv-...`
-4. Hỏi lưu vào `backend/.env` cho lần sau
-5. Tiếp tục push session + deploy + poll online
+2. **Tự mở** https://dashboard.render.com/u/settings#api-keys
+3. Bạn Create API Key → copy → dán vào terminal
+4. Kiểm tra key → liệt kê services → chọn số
+5. Hỏi lưu vào `backend/.env` cho lần sau
+6. Push session + deploy + poll online
 
 Hoặc set sẵn trong `backend/.env` (không commit):
 

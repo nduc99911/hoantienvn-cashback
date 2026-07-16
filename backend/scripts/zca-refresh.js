@@ -185,13 +185,7 @@ async function ensureRenderConnection() {
     return true;
   }
 
-  log('Render', 'Chưa có RENDER_API_KEY — kết nối Render để auto deploy');
-  console.log(`
-  Lấy API key (miễn phí):
-  1) Mở: https://dashboard.render.com/u/settings#api-keys
-  2) Create API Key → copy (rnd_...)
-  3) Dán vào đây (không commit key)
-`);
+  log('Render', 'Chưa có RENDER_API_KEY — mở trình duyệt để lấy key…');
 
   if (!process.stdin.isTTY && !YES) {
     warn('Không phải interactive terminal — bỏ qua hỏi Render');
@@ -209,11 +203,45 @@ async function ensureRenderConnection() {
       return false;
     }
 
+    // Tự mở trang API Keys trên trình duyệt mặc định
+    console.log('\n  → Đang mở trình duyệt: trang Render API Keys…');
+    const opened = openBrowser(RENDER_API_KEYS_URL);
+    if (opened) {
+      ok(`Đã mở: ${RENDER_API_KEYS_URL}`);
+    } else {
+      warn('Không mở được browser — vào tay:');
+      console.log(`     ${RENDER_API_KEYS_URL}`);
+    }
+    console.log(`
+  Trên trang vừa mở:
+  1) Đăng nhập Render (nếu chưa)
+  2) Create API Key → đặt tên (vd. hoantienvn-zca)
+  3) Copy key (rnd_...) → quay lại terminal dán vào đây
+`);
+
+    // Gợi ý mở dashboard services nếu cần chọn service sau
+    const openDash = YES
+      ? false
+      : await askYesNo(
+          rl,
+          'Mở thêm Dashboard services (nếu cần xem srv-id)?',
+          false
+        );
+    if (openDash) {
+      openBrowser(RENDER_DASHBOARD_URL);
+      ok(`Đã mở: ${RENDER_DASHBOARD_URL}`);
+    }
+
     let key = '';
     for (let i = 0; i < 3; i++) {
-      key = await ask(rl, 'Dán RENDER_API_KEY (rnd_...)');
+      key = await ask(rl, 'Dán RENDER_API_KEY vừa copy (rnd_...)');
       if (!key) {
-        warn('Trống — thử lại');
+        warn('Trống — thử lại (hoặc Enter trống rồi Ctrl+C để hủy)');
+        // Mở lại browser nếu user chưa lấy được key
+        if (i === 1) {
+          console.log('  → Mở lại trang API Keys…');
+          openBrowser(RENDER_API_KEYS_URL);
+        }
         continue;
       }
       try {
@@ -225,6 +253,8 @@ async function ensureRenderConnection() {
         console.log('FAIL');
         fail(e.message);
         key = '';
+        console.log('  → Mở lại trang API Keys để tạo key mới…');
+        openBrowser(RENDER_API_KEYS_URL);
       }
     }
     if (!key) {
@@ -354,6 +384,31 @@ function openFile(filePath) {
     /* ignore */
   }
 }
+
+/** Mở URL trên trình duyệt mặc định (Windows/macOS/Linux) */
+function openBrowser(url) {
+  try {
+    if (process.platform === 'win32') {
+      // start "" "url" — empty title required
+      spawn('cmd', ['/c', 'start', '', url], {
+        detached: true,
+        stdio: 'ignore',
+        shell: false,
+      }).unref();
+    } else if (process.platform === 'darwin') {
+      spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const RENDER_API_KEYS_URL =
+  'https://dashboard.render.com/u/settings#api-keys';
+const RENDER_DASHBOARD_URL = 'https://dashboard.render.com/';
 
 async function loginQr() {
   log('1/5', 'Đăng nhập Zalo bằng QR (ACC PHỤ)…');
