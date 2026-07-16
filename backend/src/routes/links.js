@@ -171,10 +171,10 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
 });
 
 router.get('/mine', requireAuth, async (req, res) => {
-  const links = /*FIXME db.prepare*/await run(
-      `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
-    )
-    .all(req.user.id);
+  const links = await many(
+    `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+    [req.user.id]
+  );
   res.json({
     links: links.map((l) => ({
       id: l.id,

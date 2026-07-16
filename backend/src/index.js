@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import cron from 'node-cron';
 import { fileURLToPath } from 'url';
+import { initSentry, setupSentryExpress, captureException } from './sentry.js';
 import { initDb, one, run, isPostgres } from './db/schema.js';
 import authRoutes from './routes/auth.js';
 import linkRoutes from './routes/links.js';
@@ -21,6 +22,8 @@ import { releaseHeldOrders } from './services/wallet.js';
 import { isZaloEnabled } from './services/zalo.js';
 import { isTelegramBotEnabled } from './services/telegram.js';
 import { startTelegramPolling } from './services/telegramBot.js';
+
+initSentry();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -168,8 +171,11 @@ app.get(/^(?!\/api).*/, (req, res) => {
   });
 });
 
+setupSentryExpress(app);
+
 app.use((err, _req, res, _next) => {
   console.error(err);
+  captureException(err);
   res.status(500).json({ error: 'Lỗi máy chủ' });
 });
 

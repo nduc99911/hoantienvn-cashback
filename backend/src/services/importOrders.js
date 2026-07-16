@@ -388,8 +388,10 @@ export async function importAffiliateRows(input, options = {}) {
         }
       }
 
-      const exists = /*FIXME db.prepare*/await run('SELECT id, status FROM orders WHERE order_id = ?')
-        .get(String(row.orderId));
+      const exists = await one(
+        'SELECT id, status FROM orders WHERE order_id = ?',
+        [String(row.orderId)]
+      );
       if (exists) {
         results.push({
           orderId: row.orderId,
@@ -441,10 +443,10 @@ export async function importAffiliateRows(input, options = {}) {
 
       let linkId = resolved.linkId || null;
       if (!linkId && row.subId) {
-        const link = /*FIXME db.prepare*/await run(
-            `SELECT id FROM cashback_links WHERE sub_id = ? AND user_id = ? LIMIT 1`
-          )
-          .get(row.subId, user.id);
+        const link = await one(
+          `SELECT id FROM cashback_links WHERE sub_id = ? AND user_id = ? LIMIT 1`,
+          [row.subId, user.id]
+        );
         if (link) linkId = link.id;
       }
 

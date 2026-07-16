@@ -78,12 +78,11 @@ router.get('/linked-users', requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin only' });
   }
-  const rows = /*FIXME db.prepare*/await run(
-      `SELECT id, name, email, telegram_id, telegram_name, balance, referral_code
-       FROM users WHERE telegram_id IS NOT NULL AND telegram_id != ''
-       ORDER BY id DESC LIMIT 100`
-    )
-    .all();
+  const rows = await many(
+    `SELECT id, name, email, telegram_id, telegram_name, balance, referral_code
+     FROM users WHERE telegram_id IS NOT NULL AND telegram_id != ''
+     ORDER BY id DESC LIMIT 100`
+  );
   res.json({
     users: rows.map((u) => ({
       id: u.id,
