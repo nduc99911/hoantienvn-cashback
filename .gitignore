@@ -36,3 +36,7 @@ npm-debug.log*
 .tools/
 *.exe
 
+# backups
+backups/
+**/backups/
+

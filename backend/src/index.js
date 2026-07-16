@@ -29,6 +29,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Render / reverse proxy — rate limit theo IP thật
+app.set('trust proxy', 1);
+
 await initDb();
 
 app.use(cors({ origin: true, credentials: true }));

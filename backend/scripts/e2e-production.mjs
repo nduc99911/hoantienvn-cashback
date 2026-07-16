@@ -56,15 +56,28 @@ async function main() {
     if (!ok) throw new Error('API không healthy');
   }
 
-  // 1. Register
+  // 1. Captcha + Register
   let userToken;
   let user;
   {
+    const cap = await api('/api/auth/captcha');
+    const q = cap.data.question || '';
+    const m = q.match(/(\d+)\s*\+\s*(\d+)/);
+    const answer = m ? Number(m[1]) + Number(m[2]) : null;
+    log('Captcha', cap.status === 200 && answer != null, q);
+
     const { status, data } = await api('/api/auth/register', {
       method: 'POST',
-      body: { email, password, name, phone: '0901234567' },
+      body: {
+        email,
+        password,
+        name,
+        phone: '0901234567',
+        captchaToken: cap.data.captchaToken,
+        captchaAnswer: answer,
+      },
     });
-    const ok = status === 200 && data.token;
+    const ok = status === 200 && data.token && data.token !== 'invalid';
     userToken = data.token;
     user = data.user;
     log(

@@ -7,8 +7,18 @@ import {
   generateReferralCode,
 } from '../utils/auth.js';
 import { requireAuth } from '../middleware/auth.js';
-import { limitAuth } from '../middleware/rateLimit.js';
+import {
+  limitAuth,
+  limitRegister,
+  limitRegisterEmail,
+  limitCaptcha,
+} from '../middleware/rateLimit.js';
 import { generateSubId } from '../services/affiliate.js';
+import {
+  createMathCaptcha,
+  verifyMathCaptcha,
+  isHoneypotFilled,
+} from '../services/captcha.js';
 
 const router = Router();
 
@@ -33,18 +43,71 @@ function publicUser(u) {
   };
 }
 
-router.post('/register', limitAuth, async (req, res) => {
+/** GET captcha toán — dùng trước đăng ký */
+router.get('/captcha', limitCaptcha, (_req, res) => {
+  const c = createMathCaptcha();
+  res.json({
+    captchaToken: c.captchaToken,
+    question: c.question,
+    expiresAt: c.expiresAt,
+  });
+});
+
+router.post(
+  '/register',
+  limitRegister,
+  limitRegisterEmail,
+  async (req, res) => {
   try {
-    const { email, password, name, phone, referralCode } = req.body;
+    // Honeypot: bot điền field ẩn → giả "thành công" chậm, không tạo user
+    if (isHoneypotFilled(req.body)) {
+      await new Promise((r) => setTimeout(r, 800 + Math.random() * 400));
+      return res.json({
+        token: 'invalid',
+        user: { id: 0, email: req.body.email, name: 'ok' },
+      });
+    }
+
+    const {
+      email,
+      password,
+      name,
+      phone,
+      referralCode,
+      captchaToken,
+      captchaAnswer,
+    } = req.body;
+
+    const captcha = verifyMathCaptcha(captchaToken, captchaAnswer);
+    if (!captcha.ok) {
+      return res.status(400).json({ error: captcha.error });
+    }
+
     if (!email || !password || !name) {
       return res.status(400).json({ error: 'Vui lòng nhập email, mật khẩu và họ tên' });
     }
     if (password.length < 6) {
       return res.status(400).json({ error: 'Mật khẩu tối thiểu 6 ký tự' });
     }
+    // chặn email rác đơn giản
+    const emailNorm = email.toLowerCase().trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return res.status(400).json({ error: 'Email không hợp lệ' });
+    }
+    const disposable = [
+      'mailinator.com',
+      'guerrillamail.com',
+      'tempmail.com',
+      '10minutemail.com',
+      'throwaway.email',
+    ];
+    const domain = emailNorm.split('@')[1] || '';
+    if (disposable.includes(domain)) {
+      return res.status(400).json({ error: 'Không hỗ trợ email tạm thời' });
+    }
 
     const exists = await one('SELECT id FROM users WHERE email = ?', [
-      email.toLowerCase(),
+      emailNorm,
     ]);
     if (exists) {
       return res.status(400).json({ error: 'Email đã được sử dụng' });
@@ -68,7 +131,7 @@ router.post('/register', limitAuth, async (req, res) => {
       `INSERT INTO users (email, phone, password_hash, name, referral_code, referred_by)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        email.toLowerCase().trim(),
+        emailNorm,
         phone || null,
         hashPassword(password),
         name.trim(),

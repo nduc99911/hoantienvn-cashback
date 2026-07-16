@@ -30,6 +30,7 @@ export async function api(path, options = {}) {
 export const authApi = {
   login: (email, password) =>
     api('/auth/login', { method: 'POST', body: { email, password } }),
+  captcha: () => api('/auth/captcha'),
   register: (payload) =>
     api('/auth/register', { method: 'POST', body: payload }),
   me: () => api('/auth/me'),

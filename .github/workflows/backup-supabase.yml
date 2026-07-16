@@ -1,0 +1,44 @@
+# Backup Supabase Postgres hằng ngày → GitHub Actions artifact (giữ 14 ngày)
+# Secret bắt buộc: DATABASE_URL (Supabase pooler URI)
+
+name: Backup Supabase
+
+on:
+  schedule:
+    # 02:00 UTC ≈ 09:00 VN
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install pg
+        working-directory: backend
+        run: npm install pg dotenv --no-save
+
+      - name: Run backup
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          BACKUP_DIR: ${{ github.workspace }}/backups
+        run: node scripts/backup-supabase.mjs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ github.run_id }}
+          path: backups/
+          retention-days: 14
+
+      - name: Summary
+        run: |
+          ls -lah backups/ || true
+          echo "Backup artifact: supabase-backup-${{ github.run_id }} (14 days)"
