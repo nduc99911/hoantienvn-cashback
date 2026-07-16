@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64" fill="none" role="img" aria-label="HoanTienVN">
+  <defs>
+    <linearGradient id="htg" x1="0" y1="0" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EE4D2D"/>
+      <stop offset="1" stop-color="#F97316"/>
+    </linearGradient>
+  </defs>
+  <!-- App mark -->
+  <rect x="0" y="4" width="56" height="56" rx="14" fill="url(#htg)"/>
+  <!-- Coin / cash circle -->
+  <circle cx="28" cy="32" r="16" fill="#fff" fill-opacity="0.2"/>
+  <circle cx="28" cy="32" r="12.5" stroke="#fff" stroke-width="2.2" fill="none"/>
+  <!-- HT monogram -->
+  <text x="28" y="37.5" text-anchor="middle" font-family="system-ui,Segoe UI,Arial,sans-serif" font-size="15" font-weight="800" fill="#fff" letter-spacing="-0.5">HT</text>
+  <!-- Wordmark -->
+  <text x="68" y="40" font-family="system-ui,Segoe UI,Be Vietnam Pro,Arial,sans-serif" font-size="26" font-weight="800" fill="#0f172a" letter-spacing="-0.6">HoanTien<tspan fill="#EE4D2D">VN</tspan></text>
+</svg>
