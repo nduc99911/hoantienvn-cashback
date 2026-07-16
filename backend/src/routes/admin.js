@@ -185,6 +185,7 @@ router.put('/settings', async (req, res) => {
     'zalo_welcome',
     'zalo_personal_enabled',
     'zalo_personal_allow_group',
+    'demo_mode_enabled',
   ];
   for (const key of allowed) {
     if (req.body[key] !== undefined) await setSetting(key, req.body[key]);

@@ -1330,6 +1330,10 @@ export default function Admin() {
             ['zalo_personal_enabled', 'Zalo personal bot bật (0/1)'],
             ['zalo_personal_allow_group', 'Zalo lắng nghe group (0/1)'],
             ['zalo_welcome', 'Zalo tin chào'],
+            [
+              'demo_mode_enabled',
+              'Chế độ DEMO (0/1) — bật mới hiện Đơn demo + Xác nhận hoàn tất',
+            ],
             ['admin_bank_bin', 'STK admin — BIN NH (fallback VietQR)'],
             ['admin_bank_account', 'STK admin — số tài khoản (fallback)'],
             ['admin_bank_holder', 'STK admin — chủ TK'],

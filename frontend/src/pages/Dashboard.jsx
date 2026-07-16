@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkConverter from '../components/LinkConverter';
-import { formatVnd, walletApi, linksApi, telegramApi, zaloApi } from '../lib/api';
+import {
+  formatVnd,
+  walletApi,
+  linksApi,
+  telegramApi,
+  zaloApi,
+  publicApi,
+} from '../lib/api';
 import CommunityLinks from '../components/CommunityLinks';
 
 export default function Dashboard() {
@@ -12,6 +19,7 @@ export default function Dashboard() {
   const [links, setLinks] = useState([]);
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
   const [tg, setTg] = useState(null);
   const [tgBot, setTgBot] = useState(null);
   const [bindCode, setBindCode] = useState('');
@@ -28,6 +36,12 @@ export default function Dashboard() {
     setSummary(s);
     setTxs(t.transactions);
     setLinks(l.links);
+    try {
+      const cfg = await publicApi.config();
+      setDemoMode(Boolean(cfg.demoMode));
+    } catch {
+      setDemoMode(false);
+    }
     try {
       const [st, bs] = await Promise.all([
         telegramApi.status(),
@@ -84,6 +98,27 @@ export default function Dashboard() {
   useEffect(() => {
     load().catch(console.error);
   }, []);
+
+  async function createDemoOrder() {
+    if (!demoMode) return;
+    setBusy(true);
+    setMsg('');
+    try {
+      const r = await walletApi.demoOrder({
+        productName: 'Đơn demo — Tai nghe Bluetooth',
+        orderAmount: 250000,
+        commission: 35000,
+      });
+      setMsg(
+        `Đơn demo +${formatVnd(r.cashback)}. Vào Đơn hàng → « Xác nhận hoàn tất » (chỉ khi demo bật).`
+      );
+      await load();
+    } catch (e) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   if (!summary) {
     return (
@@ -364,10 +399,22 @@ export default function Dashboard() {
         <Link to="/claim" className="btn-secondary">
           Báo đơn thiếu
         </Link>
+        {demoMode && (
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={createDemoOrder}
+            disabled={busy}
+          >
+            {busy ? '...' : '🧪 Đơn demo'}
+          </button>
+        )}
       </div>
       <p className="text-xs text-slate-400">
-        Luồng chính: lấy link (sub_id) → mua → admin import CSV Aff → hold → ví. Không
-        cần bấm xác nhận đơn.
+        Luồng chính: lấy link (sub_id) → mua → admin import CSV Aff → hold → ví.
+        {demoMode
+          ? ' · Chế độ DEMO đang bật (Admin).'
+          : ' Không cần bấm xác nhận đơn.'}
       </p>
       {msg && (
         <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{msg}</div>

@@ -179,17 +179,23 @@ router.get('/referrals', requireAuth, async (req, res) => {
   });
 });
 
-/** Demo only — staff. User thật: import CSV Aff, không tự xác nhận đơn. */
+function isDemoModeOn() {
+  return getSetting('demo_mode_enabled', '0') === '1';
+}
+
+/** Chỉ khi Admin bật demo_mode_enabled=1 */
 router.post('/demo-order', requireAuth, async (req, res) => {
-  if (!['admin', 'super_admin'].includes(req.user.role)) {
+  if (!isDemoModeOn()) {
     return res.status(403).json({
-      error: 'Chỉ admin test. User: mua qua link + import báo cáo Aff.',
+      error: 'Chế độ demo đang tắt. Admin → Cấu hình → demo_mode_enabled=1',
     });
   }
   try {
     const amount = Number(req.body.orderAmount) || 250000;
     const commission = Number(req.body.commission) || Math.round(amount * 0.14);
-    const share = parseFloat(process.env.CASHBACK_SHARE_RATIO || '0.70');
+    const share = parseFloat(
+      getSetting('cashback_share_ratio', process.env.CASHBACK_SHARE_RATIO || '0.70')
+    );
     const cashback = Math.round(commission * share);
 
     const order = await recordPendingOrder({
@@ -203,27 +209,33 @@ router.post('/demo-order', requireAuth, async (req, res) => {
       totalCommission: commission,
       cashbackAmount: cashback,
       purchaseTime: new Date().toISOString(),
+      source: 'demo',
     });
 
-    res.json({ success: true, order, cashback });
+    res.json({ success: true, order, cashback, demoMode: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-/** Demo only — staff. Không mở cho user tự “hoàn tất” đơn thật. */
+/** Chỉ demo_mode + đơn source=demo của chính user */
 router.post('/orders/:id/complete', requireAuth, async (req, res) => {
   try {
-    if (!['admin', 'super_admin'].includes(req.user.role)) {
+    if (!isDemoModeOn()) {
       return res.status(403).json({
         error:
-          'Không cần xác nhận. Đơn được ghi nhận khi admin import báo cáo Affiliate.',
+          'Chế độ demo tắt. Đơn thật: admin import báo cáo Affiliate — không cần xác nhận.',
       });
     }
     const order = await one('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn' });
-    if (order.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    if (order.user_id !== req.user.id) {
       return res.status(403).json({ error: 'Không có quyền' });
+    }
+    if (order.source !== 'demo') {
+      return res.status(403).json({
+        error: 'Chỉ đơn demo mới tự xác nhận. Đơn thật do import Aff.',
+      });
     }
     if (order.status === 'paid') {
       return res.status(400).json({ error: 'Đơn đã được thanh toán' });

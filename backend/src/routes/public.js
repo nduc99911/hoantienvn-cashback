@@ -61,6 +61,7 @@ router.get('/config', (_req, res) => {
       (process.env.GOOGLE_CLIENT_ID || getSetting('google_client_id', '')) &&
         process.env.GOOGLE_CLIENT_SECRET
     ),
+    demoMode: getSetting('demo_mode_enabled', '0') === '1',
   });
 });
 

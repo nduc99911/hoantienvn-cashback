@@ -249,6 +249,8 @@ async function seedDefaults() {
     /** zca-js personal — Admin bật/tắt; env ZCA_ENABLED=0 là kill switch */
     zalo_personal_enabled: process.env.ZCA_ENABLED === '1' ? '1' : '0',
     zalo_personal_allow_group: process.env.ZCA_ALLOW_GROUP === '1' ? '1' : '0',
+    /** Demo: user tạo đơn test + nút xác nhận hoàn tất. Tắt = production */
+    demo_mode_enabled: process.env.DEMO_MODE_ENABLED === '1' ? '1' : '0',
   };
 
   for (const [k, v] of Object.entries(defaults)) {
