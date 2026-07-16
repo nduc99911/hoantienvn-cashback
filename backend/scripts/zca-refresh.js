@@ -652,8 +652,13 @@ async function pollOnline(maxMs = 6 * 60 * 1000) {
   if (NO_POLL) return;
   const base = renderCfg.publicApi;
   log('5/5', `Poll ${base}/api/zalo/personal/status …`);
+  console.log(
+    '     (Deploy Render ~2–5 phút. Nếu enabled=false → bật trong Admin, không phải lỗi session.)'
+  );
   const start = Date.now();
   let n = 0;
+  let sawCredsOff = false;
+  let sawEnabledOff = false;
   while (Date.now() - start < maxMs) {
     n += 1;
     try {
@@ -667,12 +672,40 @@ async function pollOnline(maxMs = 6 * 60 * 1000) {
         ok('Production Zalo personal ONLINE 🎉');
         return j;
       }
+      if (j.hasCredentials && !j.enabled) {
+        sawEnabledOff = true;
+        if (n === 3 || n === 8) {
+          warn(
+            'Session đã có (creds=true) nhưng bot TẮT trong Admin (enabled=false).'
+          );
+          console.log(
+            '     → https://hoantienvn.vercel.app/admin → tab Zalo Bot → Bật bot'
+          );
+          console.log(
+            '     (Hoặc Cấu hình: zalo_personal_enabled=1 rồi Lưu)'
+          );
+        }
+      }
+      if (!j.hasCredentials) sawCredsOff = true;
     } catch (e) {
       console.log(`     #${n} wait… (${e.message})`);
     }
     await new Promise((r) => setTimeout(r, 15000));
   }
-  warn('Hết thời gian poll — kiểm tra log Render / Admin → Zalo Bot → Bật bot');
+  if (sawEnabledOff) {
+    warn('Dừng poll: session OK nhưng Admin chưa BẬT bot.');
+    console.log(`
+  Làm ngay (1 click):
+  1) https://hoantienvn.vercel.app/admin
+  2) Tab « Zalo Bot »
+  3) Nút « Bật bot »
+  4) F5 status: ${base}/api/zalo/personal/status  → online=true
+`);
+  } else if (sawCredsOff) {
+    warn('Chưa thấy credentials — deploy có thể chưa xong / env chưa apply.');
+  } else {
+    warn('Hết thời gian poll — xem log Render');
+  }
   return null;
 }
 
