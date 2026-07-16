@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LinkConverter from '../components/LinkConverter';
-import { formatVnd, walletApi, linksApi, telegramApi } from '../lib/api';
+import { formatVnd, walletApi, linksApi, telegramApi, zaloApi } from '../lib/api';
 
 export default function Dashboard() {
   const { user, refresh } = useAuth();
@@ -14,6 +14,9 @@ export default function Dashboard() {
   const [tg, setTg] = useState(null);
   const [tgBot, setTgBot] = useState(null);
   const [bindCode, setBindCode] = useState('');
+  const [zalo, setZalo] = useState(null);
+  const [zaloBot, setZaloBot] = useState(null);
+  const [zaloBindCode, setZaloBindCode] = useState('');
 
   async function load() {
     const [s, t, l] = await Promise.all([
@@ -34,6 +37,16 @@ export default function Dashboard() {
     } catch {
       /* ignore */
     }
+    try {
+      const [zs, zb] = await Promise.all([
+        zaloApi.personalStatus().catch(() => null),
+        zaloApi.bindStatus(),
+      ]);
+      setZaloBot(zs);
+      setZalo(zb);
+    } catch {
+      /* ignore */
+    }
     await refresh();
   }
 
@@ -42,6 +55,22 @@ export default function Dashboard() {
     try {
       const r = await telegramApi.bindCode();
       setBindCode(r.code);
+      setZaloBindCode('');
+      setMsg(r.instruction);
+      await load();
+    } catch (e) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function genZaloCode() {
+    setBusy(true);
+    try {
+      const r = await zaloApi.bindCode();
+      setZaloBindCode(r.code);
+      setBindCode('');
       setMsg(r.instruction);
       await load();
     } catch (e) {
@@ -181,6 +210,60 @@ export default function Dashboard() {
               {' '}
               · Bot chưa bật (admin dán TELEGRAM_BOT_TOKEN)
             </span>
+          )}
+        </div>
+      </div>
+
+      {/* Zalo personal bot */}
+      <div className="card border-blue-100 dark:border-blue-900">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="font-bold text-lg">💬 Bot Zalo</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Nhắn acc bot Zalo → dán link Shopee → nhận link hoàn tiền. Cùng ví với
+              web khi đã liên kết.
+            </p>
+            {zalo?.linked ? (
+              <p className="mt-2 text-sm text-emerald-600 font-semibold">
+                ✅ Đã liên kết Zalo
+                {zalo.zaloName ? ` (${zalo.zaloName})` : ''}
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-amber-600">
+                Chưa liên kết — tạo mã rồi nhắn bot:{' '}
+                <b>lienket xxxxxx</b>
+              </p>
+            )}
+            {zaloBindCode && (
+              <div className="mt-2">
+                <p className="font-mono text-xl font-black text-blue-600">
+                  lienket {zaloBindCode}
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Copy tin trên → gửi cho acc bot Zalo (kết bạn trước nếu cần)
+                </p>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-secondary !py-2 text-sm"
+            onClick={genZaloCode}
+            disabled={busy}
+          >
+            {zalo?.linked ? 'Tạo mã gắn lại' : 'Tạo mã liên kết Zalo'}
+          </button>
+        </div>
+        <div className="mt-3 text-xs text-slate-400">
+          Lệnh: dán link Shopee · menu · sodu · subid · don · lienket · dangky
+          {zaloBot && !zaloBot.online && (
+            <span className="text-amber-600">
+              {' '}
+              · Bot personal đang offline (admin bật Zalo Bot)
+            </span>
+          )}
+          {zaloBot?.online && (
+            <span className="text-emerald-600"> · Bot online</span>
           )}
         </div>
       </div>

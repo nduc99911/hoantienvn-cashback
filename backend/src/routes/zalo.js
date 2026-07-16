@@ -103,10 +103,15 @@ router.post('/bind-code', requireAuth, async (req, res) => {
   res.json({
     code,
     instruction: viaPersonal
-      ? `Nhắn Zalo (acc bot personal) → lienket ${code}`
-      : `Mở Zalo OA / acc support → nhắn: lienket ${code}`,
-    expiresNote: 'Dùng 1 lần. Tạo lại nếu cần.',
+      ? `Nhắn acc bot Zalo (đã kết bạn): lienket ${code}`
+      : `Nhắn acc bot Zalo: lienket ${code} (bot cần online — admin bật Zalo Bot)`,
+    expiresNote: 'Mã 6 số, dùng 1 lần. Tạo lại trên Dashboard nếu cần.',
     personalOnline: viaPersonal,
+    howTo: [
+      '1. Kết bạn acc bot Zalo (nếu chưa)',
+      `2. Gửi tin: lienket ${code}`,
+      '3. Thấy ✅ Đã liên kết → ví web = ví Zalo',
+    ],
   });
 });
 
