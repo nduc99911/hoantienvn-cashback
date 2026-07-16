@@ -73,8 +73,13 @@ export default function Home() {
     setTimeout(() => setCopiedCode(''), 2000);
   }
 
-  const videoUrl = cfg?.guideVideoUrl || '';
+  const videoUrl =
+    cfg?.guideVideoUrl ||
+    (typeof window !== 'undefined'
+      ? `${window.location.origin}/videos/huong-dan-hoan-tien.mp4`
+      : '/videos/huong-dan-hoan-tien.mp4');
   const ytId = videoUrl.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{6,})/)?.[1];
+  const isMp4 = /\.mp4($|\?)/i.test(videoUrl) || videoUrl.includes('/videos/');
 
   return (
     <div className="pb-16 md:pb-0">
@@ -264,22 +269,33 @@ export default function Home() {
               </div>
             ))}
           </div>
-          {ytId && (
-            <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl shadow-soft aspect-video">
-              <iframe
-                className="h-full w-full"
-                src={`https://www.youtube.com/embed/${ytId}`}
-                title="Hướng dẫn lấy link hoàn tiền"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+          {(ytId || isMp4) && (
+            <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl shadow-soft aspect-video bg-black">
+              {ytId ? (
+                <iframe
+                  className="h-full w-full"
+                  src={`https://www.youtube.com/embed/${ytId}`}
+                  title="Hướng dẫn lấy link hoàn tiền"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <video
+                  className="h-full w-full"
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster="/logo-app.jpg"
+                >
+                  Trình duyệt không hỗ trợ video.
+                </video>
+              )}
             </div>
           )}
-          {!ytId && (
-            <p className="mt-6 text-center text-sm text-slate-400">
-              (Admin có thể gắn video YouTube tại Cấu hình → guide_video_url)
-            </p>
-          )}
+          <p className="mt-3 text-center text-xs text-slate-400">
+            Video 3 bước · có thể thay bằng YouTube trong Admin → guide_video_url
+          </p>
         </div>
       </section>
 
