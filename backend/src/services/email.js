@@ -1,18 +1,28 @@
 /**
- * Gửi email — SMTP (nodemailer) hoặc log dev
+ * Gửi email — Resend / SMTP / dev log
  *
- * Env:
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
- *   EMAIL_DEV_LOG=1  → in link ra console (local)
- *   RESEND_API_KEY   → optional https://api.resend.com
+ * Ưu tiên: RESEND_API_KEY → SMTP_* → EMAIL_DEV_LOG
  */
 import { getSetting } from '../db/schema.js';
 
 export function isEmailConfigured() {
-  if (process.env.RESEND_API_KEY) return true;
+  if ((process.env.RESEND_API_KEY || '').trim()) return true;
   if (process.env.SMTP_HOST && process.env.SMTP_USER) return true;
   if (process.env.EMAIL_DEV_LOG === '1') return true;
   return false;
+}
+
+export function emailProviderInfo() {
+  if ((process.env.RESEND_API_KEY || '').trim()) {
+    return { configured: true, provider: 'resend' };
+  }
+  if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+    return { configured: true, provider: 'smtp', host: process.env.SMTP_HOST };
+  }
+  if (process.env.EMAIL_DEV_LOG === '1') {
+    return { configured: true, provider: 'dev-log' };
+  }
+  return { configured: false, provider: null };
 }
 
 function fromAddress() {

@@ -179,6 +179,17 @@ export async function initDb() {
 async function initSqliteTables() {
   const db = await loadSqlite();
   db.exec(fs.readFileSync(path.join(__dirname, 'schema.sqlite.sql'), 'utf8'));
+  // migrate cột mới
+  for (const sql of [
+    'ALTER TABLE users ADD COLUMN marketing_opt_in INTEGER DEFAULT 1',
+    'ALTER TABLE users ADD COLUMN phone_verified INTEGER DEFAULT 0',
+  ]) {
+    try {
+      db.exec(sql);
+    } catch {
+      /* already exists */
+    }
+  }
 }
 
 async function seedDefaults() {

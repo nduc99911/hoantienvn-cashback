@@ -155,3 +155,27 @@ CREATE TABLE IF NOT EXISTS password_resets (
   created_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
+
+CREATE TABLE IF NOT EXISTS otp_codes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  purpose TEXT DEFAULT 'register',
+  attempts INTEGER DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS email_campaigns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  subject TEXT NOT NULL,
+  body_html TEXT NOT NULL,
+  body_text TEXT,
+  status TEXT DEFAULT 'draft',
+  audience TEXT DEFAULT 'opted_in',
+  sent_count INTEGER DEFAULT 0,
+  fail_count INTEGER DEFAULT 0,
+  created_by INTEGER REFERENCES users(id),
+  created_at TEXT DEFAULT (datetime('now')),
+  sent_at TEXT
+);

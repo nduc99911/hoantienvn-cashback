@@ -4,20 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 const TABS = [
+  ['ops', 'Ops CSV'],
   ['kpi', 'KPI'],
   ['orders', 'Đơn'],
   ['withdraw', 'Rút tiền'],
   ['import', 'Import CSV'],
   ['clicks', 'Clicks'],
   ['users', 'Users'],
+  ['staff', 'Staff/RBAC'],
+  ['marketing', 'Email MKT'],
   ['telegram', 'Telegram Bot'],
   ['blog', 'Blog'],
   ['settings', 'Cấu hình'],
 ];
 
+const STAFF_ROLES = ['super_admin', 'admin', 'finance', 'support'];
+
 export default function Admin() {
   const { user } = useAuth();
-  const [tab, setTab] = useState('kpi');
+  const [tab, setTab] = useState('ops');
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
   const [withdrawals, setWithdrawals] = useState([]);
@@ -40,8 +45,21 @@ export default function Admin() {
   const [tgUsers, setTgUsers] = useState([]);
   const [tgStatus, setTgStatus] = useState(null);
   const [tgTestId, setTgTestId] = useState('');
+  const [ops, setOps] = useState(null);
+  const [comms, setComms] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [optedInCount, setOptedInCount] = useState(0);
+  const [campForm, setCampForm] = useState({
+    subject: '',
+    bodyHtml: '<p>Xin chào {{name}},</p><p>Nội dung…</p>',
+    audience: 'opted_in',
+  });
+  const [staff, setStaff] = useState([]);
+  const [rbac, setRbac] = useState(null);
 
-  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!STAFF_ROLES.includes(user?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   async function load() {
     const [s, o, w, st, c, u] = await Promise.all([
@@ -71,6 +89,23 @@ export default function Admin() {
       ]);
       setTgUsers(tu.users || []);
       setTgStatus(ts);
+    } catch {
+      /* ignore */
+    }
+    try {
+      const [op, cm, mk, stf, rb] = await Promise.all([
+        adminApi.opsChecklist(),
+        adminApi.commsStatus(),
+        adminApi.marketingCampaigns().catch(() => ({ campaigns: [], optedInCount: 0 })),
+        adminApi.staff().catch(() => ({ staff: [] })),
+        adminApi.rbac().catch(() => null),
+      ]);
+      setOps(op);
+      setComms(cm);
+      setCampaigns(mk.campaigns || []);
+      setOptedInCount(mk.optedInCount || 0);
+      setStaff(stf.staff || []);
+      setRbac(rb);
     } catch {
       /* ignore */
     }
@@ -123,6 +158,101 @@ export default function Admin() {
           </button>
         ))}
       </div>
+
+      {tab === 'ops' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="font-bold text-lg mb-1">
+              {ops?.title || 'Quy trình vận hành'}
+            </h2>
+            <p className="text-sm text-slate-500 mb-4">
+              Làm lần lượt mỗi kỳ (ngày/tuần) để đối soát Shopee → ví user.
+            </p>
+            <ol className="space-y-4">
+              {(ops?.steps || []).map((s) => (
+                <li key={s.n} className="flex gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-shopee text-white text-sm font-bold">
+                    {s.n}
+                  </span>
+                  <div>
+                    <div className="font-semibold">{s.title}</div>
+                    <p className="text-sm text-slate-500 mt-0.5">{s.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div className="card space-y-2 text-sm">
+            <h3 className="font-bold">STK / MoMo admin dùng để làm gì?</h3>
+            <ul className="list-disc pl-5 text-slate-600 dark:text-slate-300 space-y-1">
+              <li>
+                <b>Khi user rút bank:</b> hệ thống ưu tiên tạo VietQR theo{' '}
+                <b>STK của user</b> — admin quét QR để <b>chuyển tiền cho user</b>.
+              </li>
+              <li>
+                <b>STK admin</b> (BIN + số TK + chủ TK trong Cấu hình): dùng làm{' '}
+                <b>fallback</b> khi không map được BIN ngân hàng từ tên bank user;
+                và để hiển thị tham chiếu nội bộ.
+              </li>
+              <li>
+                <b>MoMo admin:</b> số tham chiếu khi xử lý rút MoMo (đối chiếu / liên hệ),
+                không tự động trừ tiền.
+              </li>
+              <li>
+                Không dùng STK admin để <em>thu</em> tiền user trong flow rút cashback
+                (chiều tiền: shop/hoa hồng → ví nội bộ → admin chi cho user).
+              </li>
+            </ul>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                className="btn-secondary !py-2 !px-3 text-xs"
+                onClick={() => setTab('import')}
+              >
+                Mở Import CSV
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !py-2 !px-3 text-xs"
+                onClick={() => setTab('withdraw')}
+              >
+                Mở Rút tiền
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !py-2 !px-3 text-xs"
+                onClick={() => setTab('settings')}
+              >
+                Cấu hình STK admin
+              </button>
+            </div>
+          </div>
+          {comms && (
+            <div className="card text-sm space-y-1">
+              <div className="font-bold mb-1">Kênh gửi tin</div>
+              <div>
+                Email:{' '}
+                {comms.email?.configured
+                  ? `OK (${comms.email.provider})`
+                  : 'Chưa cấu hình RESEND/SMTP'}
+              </div>
+              <div>
+                SMS OTP: {comms.sms?.provider || 'mock'}{' '}
+                {comms.sms?.configured ? '' : '(mock log)'}
+              </div>
+              <button
+                type="button"
+                className="btn-primary !py-2 !px-3 text-xs mt-2"
+                onClick={() =>
+                  act(() => adminApi.testEmail(user.email), 'Đã gửi test email')
+                }
+              >
+                Test email → {user.email}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'kpi' && stats && (
         <div className="space-y-4">
@@ -499,10 +629,28 @@ export default function Admin() {
                   <td className="px-3 py-2">{formatVnd(u.balance)}</td>
                   <td className="px-3 py-2">{formatVnd(u.heldBalance)}</td>
                   <td className="px-3 py-2 text-xs">
-                    {u.role} / {u.status}
+                    <select
+                      className="input !py-1 !text-xs max-w-[140px]"
+                      value={u.role || 'user'}
+                      onChange={(e) =>
+                        act(
+                          () => adminApi.setUserRole(u.id, e.target.value),
+                          `Role → ${e.target.value}`
+                        )
+                      }
+                    >
+                      {['user', 'support', 'finance', 'admin', 'super_admin'].map(
+                        (r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        )
+                      )}
+                    </select>
+                    <div className="text-slate-400 mt-0.5">{u.status}</div>
                   </td>
                   <td className="px-3 py-2">
-                    {u.role !== 'admin' && (
+                    {u.role !== 'super_admin' && (
                       <button
                         className="text-xs font-semibold text-shopee"
                         onClick={() =>
@@ -524,6 +672,140 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {tab === 'staff' && (
+        <div className="space-y-4">
+          <div className="card">
+            <h2 className="font-bold mb-2">Staff hiện tại</h2>
+            <p className="text-sm text-slate-500 mb-3">
+              Role của bạn: <b>{user.role}</b>
+              {rbac?.me?.permissions && (
+                <span className="block text-xs mt-1 font-mono text-slate-400">
+                  Quyền: {(rbac.me.permissions || []).join(', ')}
+                </span>
+              )}
+            </p>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {staff.map((s) => (
+                <li key={s.id} className="py-2 flex justify-between text-sm">
+                  <span>
+                    {s.name} · {s.email}
+                  </span>
+                  <span className="font-mono text-xs text-shopee">{s.role}</span>
+                </li>
+              ))}
+              {!staff.length && (
+                <li className="text-slate-400 text-sm">Chưa có staff list</li>
+              )}
+            </ul>
+          </div>
+          <div className="card text-sm space-y-2">
+            <h3 className="font-bold">Ma trận quyền</h3>
+            <ul className="space-y-1 text-slate-600 dark:text-slate-300">
+              <li>
+                <b>super_admin</b> — full (*)
+              </li>
+              <li>
+                <b>admin</b> — đơn, rút, import, users, settings, marketing, blog
+              </li>
+              <li>
+                <b>finance</b> — duyệt đơn, hold, rút, import (không settings/marketing)
+              </li>
+              <li>
+                <b>support</b> — xem đơn, từ chối, ban user, telegram
+              </li>
+            </ul>
+            <p className="text-xs text-slate-400">
+              Đổi role tại tab Users (cần quyền users.role).
+            </p>
+          </div>
+        </div>
+      )}
+
+      {tab === 'marketing' && (
+        <div className="space-y-4">
+          <div className="card space-y-3">
+            <h2 className="font-bold">Email marketing</h2>
+            <p className="text-sm text-slate-500">
+              Audience opt-in: <b>{optedInCount}</b> user · Cần Resend/SMTP trên server
+            </p>
+            <input
+              className="input"
+              placeholder="Subject"
+              value={campForm.subject}
+              onChange={(e) =>
+                setCampForm({ ...campForm, subject: e.target.value })
+              }
+            />
+            <textarea
+              className="input min-h-[140px] font-mono text-xs"
+              value={campForm.bodyHtml}
+              onChange={(e) =>
+                setCampForm({ ...campForm, bodyHtml: e.target.value })
+              }
+            />
+            <p className="text-xs text-slate-400">
+              Placeholder: {'{{name}}'}, {'{{email}}'}
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() =>
+                  act(async () => {
+                    await adminApi.createCampaign(campForm);
+                    setCampForm({
+                      subject: '',
+                      bodyHtml: '<p>Xin chào {{name}},</p><p>…</p>',
+                      audience: 'opted_in',
+                    });
+                    await load();
+                  }, 'Đã tạo draft campaign')
+                }
+              >
+                Tạo draft
+              </button>
+            </div>
+          </div>
+          <div className="card !p-0 overflow-hidden">
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {campaigns.map((c) => (
+                <li
+                  key={c.id}
+                  className="px-4 py-3 flex flex-wrap gap-2 justify-between items-center text-sm"
+                >
+                  <div>
+                    <div className="font-medium">{c.subject}</div>
+                    <div className="text-xs text-slate-400">
+                      #{c.id} · {c.status} · sent {c.sent_count || 0} / fail{' '}
+                      {c.fail_count || 0}
+                    </div>
+                  </div>
+                  {c.status !== 'sent' && (
+                    <button
+                      type="button"
+                      className="btn-secondary !py-1 !px-2 text-xs"
+                      onClick={() =>
+                        act(
+                          () => adminApi.sendCampaign(c.id),
+                          `Đã gửi campaign #${c.id}`
+                        )
+                      }
+                    >
+                      Gửi ngay
+                    </button>
+                  )}
+                </li>
+              ))}
+              {!campaigns.length && (
+                <li className="p-6 text-center text-slate-400 text-sm">
+                  Chưa có campaign
+                </li>
+              )}
+            </ul>
+          </div>
         </div>
       )}
 
@@ -703,12 +985,14 @@ export default function Admin() {
             ['telegram_bot_enabled', 'Telegram bot bật (0/1)'],
             ['telegram_mode', 'Telegram mode: polling | webhook'],
             ['telegram_welcome', 'Telegram tin chào'],
-            ['admin_bank_bin', 'VietQR BIN NH'],
-            ['admin_bank_account', 'VietQR STK'],
-            ['admin_bank_holder', 'VietQR chủ TK'],
+            ['admin_bank_bin', 'STK admin — BIN NH (fallback VietQR)'],
+            ['admin_bank_account', 'STK admin — số tài khoản (fallback)'],
+            ['admin_bank_holder', 'STK admin — chủ TK'],
+            ['admin_momo_phone', 'MoMo admin (tham chiếu xử lý rút)'],
             ['support_zalo', 'Zalo support'],
             ['support_phone', 'Hotline'],
             ['support_email', 'Email support'],
+            ['gsc_verification', 'Google Search Console meta content'],
           ].map(([k, label]) => (
             <div key={k}>
               <label className="mb-1 block text-sm font-medium">{label}</label>

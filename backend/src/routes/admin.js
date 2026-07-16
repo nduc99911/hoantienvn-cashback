@@ -11,7 +11,22 @@ import {
   sqlNowMinusDays,
   isPostgres,
 } from '../db/schema.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAdmin, requirePermission } from '../middleware/auth.js';
+import {
+  canAssignRole,
+  isStaffRole,
+  listPermissions,
+  ROLES,
+  ROLE_PERMISSIONS,
+} from '../services/rbac.js';
+import {
+  createCampaign,
+  listCampaigns,
+  sendCampaign,
+  getAudienceEmails,
+} from '../services/marketing.js';
+import { emailProviderInfo, sendEmail, isEmailConfigured } from '../services/email.js';
+import { isSmsConfigured } from '../services/sms.js';
 import {
   approveOrderToHold,
   rejectOrder,
@@ -151,6 +166,8 @@ router.put('/settings', async (req, res) => {
     'enable_tiktok',
     'enable_lazada',
     'site_url',
+    'gsc_verification',
+    'admin_momo_phone',
     'zalo_oa_access_token',
     'zalo_oa_secret',
     'zalo_app_id',
@@ -164,9 +181,185 @@ router.put('/settings', async (req, res) => {
   res.json({ settings: await getAllSettings(), success: true });
 });
 
-router.post('/telegram/test', async (_req, res) => {
-  const r = await sendTelegram('✅ HoanTienVN: test Telegram OK');
-  res.json(r);
+router.post(
+  '/telegram/test',
+  requirePermission('telegram.use'),
+  async (_req, res) => {
+    const r = await sendTelegram('✅ HoanTienVN: test Telegram OK');
+    res.json(r);
+  }
+);
+
+/** Email / SMS status + test */
+router.get('/comms/status', async (_req, res) => {
+  res.json({
+    email: emailProviderInfo(),
+    sms: {
+      configured: isSmsConfigured(),
+      provider: process.env.SMS_PROVIDER || 'mock',
+    },
+  });
+});
+
+router.post(
+  '/email/test',
+  requirePermission('email.test'),
+  async (req, res) => {
+    try {
+      if (!isEmailConfigured()) {
+        return res.status(400).json({
+          error:
+            'Chưa cấu hình email. Set RESEND_API_KEY hoặc SMTP_HOST/USER/PASS trên Render.',
+        });
+      }
+      const to = req.body?.to || req.user.email;
+      const r = await sendEmail({
+        to,
+        subject: 'HoanTienVN — test email',
+        text: 'Email SMTP/Resend hoạt động OK.',
+        html: '<p><b>HoanTienVN</b> — test email OK.</p>',
+      });
+      res.json(r);
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }
+);
+
+/** Marketing */
+router.get(
+  '/marketing/campaigns',
+  requirePermission('marketing.read'),
+  async (_req, res) => {
+    const campaigns = await listCampaigns();
+    const audience = await getAudienceEmails('opted_in');
+    res.json({ campaigns, optedInCount: audience.length });
+  }
+);
+
+router.post(
+  '/marketing/campaigns',
+  requirePermission('marketing.send'),
+  async (req, res) => {
+    try {
+      const c = await createCampaign({
+        subject: req.body.subject,
+        bodyHtml: req.body.bodyHtml,
+        bodyText: req.body.bodyText,
+        audience: req.body.audience || 'opted_in',
+        createdBy: req.user.id,
+      });
+      res.json({ campaign: c });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }
+);
+
+router.post(
+  '/marketing/campaigns/:id/send',
+  requirePermission('marketing.send'),
+  async (req, res) => {
+    try {
+      const r = await sendCampaign(Number(req.params.id));
+      res.json(r);
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }
+);
+
+/** Staff / RBAC */
+router.get('/rbac', async (req, res) => {
+  res.json({
+    roles: ROLES,
+    permissions: ROLE_PERMISSIONS,
+    me: {
+      role: req.user.role,
+      permissions: listPermissions(req.user.role),
+    },
+  });
+});
+
+router.get('/staff', requirePermission('staff.read'), async (_req, res) => {
+  const rows = await many(
+    `SELECT id, email, name, role, status, created_at FROM users
+     WHERE role IN ('super_admin','admin','finance','support')
+     ORDER BY id`
+  );
+  res.json({ staff: rows });
+});
+
+router.post(
+  '/users/:id/role',
+  requirePermission('users.role'),
+  async (req, res) => {
+    try {
+      const role = String(req.body.role || '').trim();
+      if (!ROLES.includes(role)) {
+        return res.status(400).json({ error: `role hợp lệ: ${ROLES.join(', ')}` });
+      }
+      if (!canAssignRole(req.user.role, role)) {
+        return res.status(403).json({ error: 'Không được gán role này' });
+      }
+      const target = await one('SELECT * FROM users WHERE id = ?', [
+        req.params.id,
+      ]);
+      if (!target) return res.status(404).json({ error: 'User không tồn tại' });
+      if (
+        target.role === 'super_admin' &&
+        req.user.role !== 'super_admin'
+      ) {
+        return res.status(403).json({ error: 'Không đổi super_admin' });
+      }
+      if (Number(target.id) === Number(req.user.id) && role === 'user') {
+        return res.status(400).json({ error: 'Không tự hạ quyền chính mình' });
+      }
+      await run('UPDATE users SET role = ? WHERE id = ?', [role, target.id]);
+      res.json({ success: true, id: target.id, role });
+    } catch (e) {
+      res.status(400).json({ error: e.message });
+    }
+  }
+);
+
+/** Ops checklist (static) */
+router.get('/ops/checklist', async (_req, res) => {
+  res.json({
+    title: 'Quy trình vận hành hàng ngày/tuần',
+    steps: [
+      {
+        n: 1,
+        title: 'Export CSV Shopee Affiliate',
+        detail:
+          'Portal affiliate.shopee.vn → Báo cáo hoa hồng → Tải AffiliateCommissionReport_*.csv (UTF-8)',
+      },
+      {
+        n: 2,
+        title: 'Import CSV trên Admin',
+        detail:
+          'Tab Import CSV → dán nội dung file → Preview → Import (auto hold). Kiểm tra Sub_id1 map user (U{id}_{code}).',
+      },
+      {
+        n: 3,
+        title: 'Duyệt / hold / nhả ví',
+        detail:
+          'Tab Đơn: duyệt claim (nếu có). Import thường auto-hold. Tab KPI → Nhả hold đến hạn hoặc nhả tay.',
+      },
+      {
+        n: 4,
+        title: 'Xử lý rút tiền',
+        detail:
+          'Tab Rút tiền: xem VietQR STK **user** (admin quét chuyển cho user) → Đã chuyển / Từ chối. STK admin chỉ fallback khi thiếu BIN user.',
+      },
+      {
+        n: 5,
+        title: 'Đối soát & hỗ trợ',
+        detail:
+          'Telegram notify, ban user spam, kiểm tra clicks. Backup Supabase chạy tự động (GitHub Actions).',
+      },
+    ],
+  });
 });
 
 router.get('/orders', async (req, res) => {
@@ -418,10 +611,23 @@ router.get('/users', async (_req, res) => {
   });
 });
 
-router.post('/users/:id/ban', async (req, res) => {
-  const status = req.body.status === 'active' ? 'active' : 'banned';
-  await run('UPDATE users SET status = ? WHERE id = ?', [status, req.params.id]);
-  res.json({ success: true, status });
-});
+router.post(
+  '/users/:id/ban',
+  requirePermission('users.ban'),
+  async (req, res) => {
+    const status = req.body.status === 'active' ? 'active' : 'banned';
+    const target = await one('SELECT role FROM users WHERE id = ?', [
+      req.params.id,
+    ]);
+    if (target?.role === 'super_admin' && req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Không ban super_admin' });
+    }
+    await run('UPDATE users SET status = ? WHERE id = ?', [
+      status,
+      req.params.id,
+    ]);
+    res.json({ success: true, status });
+  }
+);
 
 export default router;

@@ -95,7 +95,30 @@ export const adminApi = {
   users: () => api('/admin/users'),
   banUser: (id, status) =>
     api(`/admin/users/${id}/ban`, { method: 'POST', body: { status } }),
+  setUserRole: (id, role) =>
+    api(`/admin/users/${id}/role`, { method: 'POST', body: { role } }),
   testTelegram: () => api('/admin/telegram/test', { method: 'POST' }),
+  commsStatus: () => api('/admin/comms/status'),
+  testEmail: (to) =>
+    api('/admin/email/test', { method: 'POST', body: { to } }),
+  marketingCampaigns: () => api('/admin/marketing/campaigns'),
+  createCampaign: (payload) =>
+    api('/admin/marketing/campaigns', { method: 'POST', body: payload }),
+  sendCampaign: (id) =>
+    api(`/admin/marketing/campaigns/${id}/send`, { method: 'POST' }),
+  staff: () => api('/admin/staff'),
+  rbac: () => api('/admin/rbac'),
+  opsChecklist: () => api('/admin/ops/checklist'),
+};
+
+export const otpApi = {
+  send: (phone, purpose = 'register') =>
+    api('/auth/otp/send', { method: 'POST', body: { phone, purpose } }),
+  verify: (phone, code, purpose = 'register') =>
+    api('/auth/otp/verify', {
+      method: 'POST',
+      body: { phone, code, purpose },
+    }),
 };
 
 export const blogApi = {

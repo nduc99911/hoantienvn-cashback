@@ -24,6 +24,9 @@ import {
   requestPasswordReset,
   resetPasswordWithToken,
 } from '../services/passwordReset.js';
+import { sendOtp, verifyOtp } from '../services/sms.js';
+import { setMarketingOptIn } from '../services/marketing.js';
+import { listPermissions, isStaffRole } from '../services/rbac.js';
 
 const router = Router();
 
@@ -44,6 +47,8 @@ function publicUser(u) {
     momoPhone: u.momo_phone,
     role: u.role,
     status: u.status || 'active',
+    marketingOptIn: u.marketing_opt_in !== 0 && u.marketing_opt_in !== false,
+    phoneVerified: Boolean(u.phone_verified),
     createdAt: u.created_at,
   };
 }
@@ -203,7 +208,44 @@ router.post('/reset-password', limitForgotPassword, async (req, res) => {
 });
 
 router.get('/me', requireAuth, async (req, res) => {
-  res.json({ user: publicUser(req.user) });
+  const u = publicUser(req.user);
+  res.json({
+    user: u,
+    permissions: listPermissions(req.user.role),
+    isStaff: isStaffRole(req.user.role),
+  });
+});
+
+/** OTP SMS */
+router.post('/otp/send', limitForgotPassword, async (req, res) => {
+  try {
+    const r = await sendOtp(req.body?.phone, req.body?.purpose || 'register');
+    res.json(r);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.post('/otp/verify', limitForgotPassword, async (req, res) => {
+  try {
+    const r = await verifyOtp(
+      req.body?.phone,
+      req.body?.code,
+      req.body?.purpose || 'register'
+    );
+    res.json(r);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+router.put('/marketing-opt-in', requireAuth, async (req, res) => {
+  try {
+    const r = await setMarketingOptIn(req.user.id, req.body?.optIn !== false);
+    res.json(r);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 router.put('/profile', requireAuth, async (req, res) => {

@@ -24,13 +24,18 @@ async function ensureUser({ email, password, name, role, referralCode, referredB
 async function main() {
   await initDb();
 
-  const admin = await ensureUser({
+  let admin = await ensureUser({
     email: 'admin@hoantien.vn',
     password: 'admin123',
     name: 'Admin Hoàn Tiền',
-    role: 'admin',
+    role: 'super_admin',
     referralCode: 'ADMIN001',
   });
+  // nâng admin cũ
+  if (admin.role === 'admin') {
+    await run(`UPDATE users SET role = 'super_admin' WHERE id = ?`, [admin.id]);
+    admin = await one('SELECT * FROM users WHERE id = ?', [admin.id]);
+  }
 
   const demo = await ensureUser({
     email: 'demo@hoantien.vn',
@@ -51,7 +56,7 @@ async function main() {
   });
 
   console.log('Seed xong!');
-  console.log('Admin: admin@hoantien.vn / admin123');
+  console.log('Super admin: admin@hoantien.vn / admin123');
   console.log('Demo:  demo@hoantien.vn / demo123');
   console.log('Mã giới thiệu demo:', demo.referral_code);
   console.log(
