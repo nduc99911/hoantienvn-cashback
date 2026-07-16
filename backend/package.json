@@ -11,7 +11,8 @@
     "zca:login": "node scripts/zca-login-qr.js",
     "zca:refresh": "node scripts/zca-refresh.js",
     "zca:refresh:local": "node scripts/zca-refresh.js --local-only",
-    "zca:refresh:reuse": "node scripts/zca-refresh.js --reuse-session"
+    "zca:refresh:reuse": "node scripts/zca-refresh.js --reuse-session",
+    "aff:test-csv": "node scripts/make-test-aff-csv.mjs"
   },
   "dependencies": {
     "@sentry/node": "^9.47.1",
