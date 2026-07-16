@@ -32,6 +32,7 @@
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
+import readline from 'readline';
 import { fileURLToPath } from 'url';
 import { execSync, spawn } from 'child_process';
 import { Zalo, LoginQRCallbackEventType } from 'zca-js';
@@ -39,6 +40,7 @@ import { Zalo, LoginQRCallbackEventType } from 'zca-js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const dataDir = path.join(root, 'data');
+const envPath = path.join(root, '.env');
 const sessionPath =
   process.env.ZCA_SESSION_PATH || path.join(dataDir, 'zca-session.json');
 const qrPath = path.join(dataDir, 'zca-qr.png');
@@ -50,19 +52,21 @@ const REUSE = args.has('--reuse-session') || args.has('--reuse');
 const NO_DEPLOY = args.has('--no-deploy');
 const NO_POLL = args.has('--no-poll');
 const OPEN_QR = !args.has('--no-open-qr');
+const YES = args.has('--yes') || args.has('-y');
 
 const RENDER_API = 'https://api.render.com/v1';
-const apiKey = (process.env.RENDER_API_KEY || '').trim();
-const serviceIdEnv = (process.env.RENDER_SERVICE_ID || '').trim();
-const serviceName = (
-  process.env.RENDER_SERVICE_NAME ||
-  'hoantienvn-api'
-).trim();
-const publicApi = (
-  process.env.RENDER_API_URL ||
-  process.env.PUBLIC_API_URL ||
-  'https://hoantienvn-api.onrender.com'
-).replace(/\/$/, '');
+
+/** Runtime Render config (có thể hỏi interactive nếu thiếu) */
+const renderCfg = {
+  apiKey: (process.env.RENDER_API_KEY || '').trim(),
+  serviceId: (process.env.RENDER_SERVICE_ID || '').trim(),
+  serviceName: (process.env.RENDER_SERVICE_NAME || 'hoantienvn-api').trim(),
+  publicApi: (
+    process.env.RENDER_API_URL ||
+    process.env.PUBLIC_API_URL ||
+    'https://hoantienvn-api.onrender.com'
+  ).replace(/\/$/, ''),
+};
 
 function log(step, msg) {
   console.log(`\n[${step}] ${msg}`);
@@ -78,6 +82,234 @@ function warn(msg) {
 
 function fail(msg) {
   console.error(`  ❌ ${msg}`);
+}
+
+function createRl() {
+  return readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+}
+
+function ask(rl, question, defaultValue = '') {
+  const hint = defaultValue ? ` [${defaultValue}]` : '';
+  return new Promise((resolve) => {
+    rl.question(`${question}${hint}: `, (ans) => {
+      const v = String(ans || '').trim();
+      resolve(v || defaultValue);
+    });
+  });
+}
+
+function askYesNo(rl, question, defaultYes = true) {
+  const d = defaultYes ? 'Y/n' : 'y/N';
+  return new Promise((resolve) => {
+    rl.question(`${question} (${d}): `, (ans) => {
+      const v = String(ans || '').trim().toLowerCase();
+      if (!v) return resolve(defaultYes);
+      resolve(v === 'y' || v === 'yes' || v === '1' || v === 'có' || v === 'co');
+    });
+  });
+}
+
+/** Ghi / cập nhật key trong backend/.env (không in value ra log) */
+function upsertEnvFile(pairs) {
+  let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  if (content && !content.endsWith('\n')) content += '\n';
+  for (const [key, value] of Object.entries(pairs)) {
+    if (value === undefined || value === null || value === '') continue;
+    const line = `${key}=${value}`;
+    const re = new RegExp(`^${key}=.*$`, 'm');
+    if (re.test(content)) {
+      content = content.replace(re, line);
+    } else {
+      content += `${line}\n`;
+    }
+  }
+  fs.writeFileSync(envPath, content, 'utf8');
+}
+
+async function validateRenderKey(key) {
+  const res = await fetch(`${RENDER_API}/owners`, {
+    headers: {
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+    },
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`API key không hợp lệ (${res.status}): ${t.slice(0, 120)}`);
+  }
+  return true;
+}
+
+async function listRenderServices(key) {
+  const res = await fetch(`${RENDER_API}/services?limit=50`, {
+    headers: {
+      Authorization: `Bearer ${key}`,
+      Accept: 'application/json',
+    },
+  });
+  const text = await res.text();
+  let body;
+  try {
+    body = text ? JSON.parse(text) : [];
+  } catch {
+    body = [];
+  }
+  if (!res.ok) {
+    throw new Error(`List services fail ${res.status}`);
+  }
+  const items = Array.isArray(body) ? body : body?.data || [];
+  const out = [];
+  for (const row of items) {
+    const svc = row.service || row;
+    if (svc?.id && svc?.name) {
+      out.push({
+        id: svc.id,
+        name: svc.name,
+        type: svc.type || svc.serviceDetails?.type || '',
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Nếu thiếu RENDER_API_KEY → hỏi kết nối Render (trừ --local-only / từ chối).
+ */
+async function ensureRenderConnection() {
+  if (LOCAL_ONLY) return false;
+  if (renderCfg.apiKey) {
+    ok('Đã có RENDER_API_KEY trong env');
+    return true;
+  }
+
+  log('Render', 'Chưa có RENDER_API_KEY — kết nối Render để auto deploy');
+  console.log(`
+  Lấy API key (miễn phí):
+  1) Mở: https://dashboard.render.com/u/settings#api-keys
+  2) Create API Key → copy (rnd_...)
+  3) Dán vào đây (không commit key)
+`);
+
+  if (!process.stdin.isTTY && !YES) {
+    warn('Không phải interactive terminal — bỏ qua hỏi Render');
+    warn('Chạy lại trong PowerShell/CMD hoặc set RENDER_API_KEY trong .env');
+    return false;
+  }
+
+  const rl = createRl();
+  try {
+    const want = YES
+      ? true
+      : await askYesNo(rl, 'Kết nối Render API để auto push session?', true);
+    if (!want) {
+      warn('Bỏ qua Render — chỉ local B64 + clipboard');
+      return false;
+    }
+
+    let key = '';
+    for (let i = 0; i < 3; i++) {
+      key = await ask(rl, 'Dán RENDER_API_KEY (rnd_...)');
+      if (!key) {
+        warn('Trống — thử lại');
+        continue;
+      }
+      try {
+        process.stdout.write('  Đang kiểm tra key… ');
+        await validateRenderKey(key);
+        console.log('OK');
+        break;
+      } catch (e) {
+        console.log('FAIL');
+        fail(e.message);
+        key = '';
+      }
+    }
+    if (!key) {
+      warn('Không lấy được API key hợp lệ');
+      return false;
+    }
+    renderCfg.apiKey = key;
+
+    // Service
+    let services = [];
+    try {
+      services = await listRenderServices(key);
+    } catch (e) {
+      warn(`List services: ${e.message}`);
+    }
+
+    if (services.length) {
+      console.log('\n  Services trên account:');
+      services.forEach((s, i) => {
+        console.log(`    [${i + 1}] ${s.name}  (${s.id})  ${s.type || ''}`);
+      });
+      const pick = await ask(
+        rl,
+        `Chọn số 1-${services.length}, hoặc dán srv-xxx / tên service`,
+        '1'
+      );
+      if (/^\d+$/.test(pick)) {
+        const idx = parseInt(pick, 10) - 1;
+        if (services[idx]) {
+          renderCfg.serviceId = services[idx].id;
+          renderCfg.serviceName = services[idx].name;
+        }
+      } else if (pick.startsWith('srv-')) {
+        renderCfg.serviceId = pick;
+        const found = services.find((s) => s.id === pick);
+        if (found) renderCfg.serviceName = found.name;
+      } else if (pick) {
+        renderCfg.serviceName = pick;
+        const found = services.find(
+          (s) => s.name.toLowerCase() === pick.toLowerCase()
+        );
+        if (found) renderCfg.serviceId = found.id;
+      }
+    } else {
+      const sid = await ask(
+        rl,
+        'Service ID (srv-...) hoặc tên',
+        renderCfg.serviceName || 'hoantienvn-api'
+      );
+      if (sid.startsWith('srv-')) renderCfg.serviceId = sid;
+      else renderCfg.serviceName = sid;
+    }
+
+    const apiUrl = await ask(
+      rl,
+      'Public API URL (health/status)',
+      renderCfg.publicApi
+    );
+    if (apiUrl) renderCfg.publicApi = apiUrl.replace(/\/$/, '');
+
+    const save = YES
+      ? true
+      : await askYesNo(
+          rl,
+          'Lưu RENDER_* vào backend/.env cho lần sau?',
+          true
+        );
+    if (save) {
+      upsertEnvFile({
+        RENDER_API_KEY: renderCfg.apiKey,
+        RENDER_SERVICE_ID: renderCfg.serviceId || '',
+        RENDER_SERVICE_NAME: renderCfg.serviceName || 'hoantienvn-api',
+        RENDER_API_URL: renderCfg.publicApi,
+      });
+      ok(`Đã lưu Render config → ${envPath}`);
+      warn('File .env đã trong .gitignore — đừng commit');
+    }
+
+    ok(
+      `Render sẵn sàng: service=${renderCfg.serviceName || renderCfg.serviceId}`
+    );
+    return true;
+  } finally {
+    rl.close();
+  }
 }
 
 function copyClipboard(text) {
@@ -247,7 +479,7 @@ async function renderFetch(pathname, opts = {}) {
   const res = await fetch(`${RENDER_API}${pathname}`, {
     ...opts,
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${renderCfg.apiKey}`,
       Accept: 'application/json',
       'Content-Type': 'application/json',
       ...(opts.headers || {}),
@@ -271,41 +503,43 @@ async function renderFetch(pathname, opts = {}) {
 }
 
 async function resolveServiceId() {
-  if (serviceIdEnv) return serviceIdEnv;
-  log('4a', `Tìm service name="${serviceName}"…`);
+  if (renderCfg.serviceId) return renderCfg.serviceId;
+  log('4a', `Tìm service name="${renderCfg.serviceName}"…`);
   const list = await renderFetch('/services?limit=50');
   const items = Array.isArray(list) ? list : list?.data || [];
   for (const row of items) {
     const svc = row.service || row;
     const name = svc?.name || svc?.serviceDetails?.name;
     const id = svc?.id;
-    if (name === serviceName && id) {
+    if (name === renderCfg.serviceName && id) {
       ok(`Found ${name} → ${id}`);
+      renderCfg.serviceId = id;
       return id;
     }
   }
-  // fuzzy
   for (const row of items) {
     const svc = row.service || row;
     const name = String(svc?.name || '');
     const id = svc?.id;
     if (id && name.toLowerCase().includes('hoantien')) {
       ok(`Found fuzzy ${name} → ${id}`);
+      renderCfg.serviceId = id;
+      renderCfg.serviceName = name;
       return id;
     }
   }
   throw new Error(
-    `Không tìm service "${serviceName}". Set RENDER_SERVICE_ID=srv-...`
+    `Không tìm service "${renderCfg.serviceName}". Set RENDER_SERVICE_ID=srv-...`
   );
 }
 
 async function pushToRender(b64) {
   log('4/5', 'Cập nhật env Render (ZCA_SESSION_B64)…');
-  if (!apiKey) {
-    warn('Chưa có RENDER_API_KEY — bỏ qua auto push');
+  if (!renderCfg.apiKey) {
+    warn('Chưa kết nối Render — bỏ qua auto push');
     console.log(`
   Làm tay:
-  1) Dashboard Render → ${serviceName} → Environment
+  1) Dashboard Render → ${renderCfg.serviceName} → Environment
   2) ZCA_SESSION_B64 = (đã copy clipboard / file ${b64Path})
   3) ZCA_ENABLED=1
   4) Save → Deploy
@@ -316,7 +550,6 @@ async function pushToRender(b64) {
   const serviceId = await resolveServiceId();
   ok(`Service ID: ${serviceId}`);
 
-  // List existing env vars — PUT replaces all, phải merge
   const existing = await renderFetch(`/services/${serviceId}/env-vars`);
   const rows = Array.isArray(existing) ? existing : existing?.envVars || [];
   const map = new Map();
@@ -327,7 +560,10 @@ async function pushToRender(b64) {
 
   map.set('ZCA_SESSION_B64', b64);
   map.set('ZCA_ENABLED', '1');
-  if (process.env.ZCA_ALLOW_GROUP === '1' || process.env.ZCA_ALLOW_GROUP === 'true') {
+  if (
+    process.env.ZCA_ALLOW_GROUP === '1' ||
+    process.env.ZCA_ALLOW_GROUP === 'true'
+  ) {
     map.set('ZCA_ALLOW_GROUP', '1');
   }
 
@@ -359,13 +595,14 @@ async function pushToRender(b64) {
 
 async function pollOnline(maxMs = 6 * 60 * 1000) {
   if (NO_POLL) return;
-  log('5/5', `Poll ${publicApi}/api/zalo/personal/status …`);
+  const base = renderCfg.publicApi;
+  log('5/5', `Poll ${base}/api/zalo/personal/status …`);
   const start = Date.now();
   let n = 0;
   while (Date.now() - start < maxMs) {
     n += 1;
     try {
-      const res = await fetch(`${publicApi}/api/zalo/personal/status`, {
+      const res = await fetch(`${base}/api/zalo/personal/status`, {
         signal: AbortSignal.timeout(25000),
       });
       const j = await res.json();
@@ -412,20 +649,10 @@ async function main() {
   if (clipped) ok('Đã copy ZCA_SESSION_B64 vào clipboard');
   else warn('Không copy clipboard — mở file .b64.txt');
 
-  // Local .env gợi ý (không tự bật bot local — tránh cướp listener)
+  // Local .env: tắt bot local (tránh cướp listener production)
   try {
-    const envPath = path.join(root, '.env');
-    if (fs.existsSync(envPath)) {
-      let env = fs.readFileSync(envPath, 'utf8');
-      // Chỉ đảm bảo local ZCA_ENABLED=0 để không cướp production
-      if (/^ZCA_ENABLED=/m.test(env)) {
-        env = env.replace(/^ZCA_ENABLED=.*/m, 'ZCA_ENABLED=0');
-      } else {
-        env = env.trimEnd() + '\nZCA_ENABLED=0\n';
-      }
-      fs.writeFileSync(envPath, env, 'utf8');
-      ok('Local .env: ZCA_ENABLED=0 (tránh cướp listener Render)');
-    }
+    upsertEnvFile({ ZCA_ENABLED: '0' });
+    ok('Local .env: ZCA_ENABLED=0 (tránh cướp listener Render)');
   } catch {
     /* ignore */
   }
@@ -441,6 +668,9 @@ async function main() {
     process.exit(0);
   }
 
+  // Hỏi kết nối Render nếu chưa có API key
+  await ensureRenderConnection();
+
   const push = await pushToRender(b64);
   if (push.pushed) {
     await pollOnline();
@@ -449,7 +679,10 @@ async function main() {
   console.log('\n── Xong ──');
   console.log('• Session local:', sessionPath);
   console.log('• B64 file:    ', b64Path);
-  console.log('• Status URL:  ', `${publicApi}/api/zalo/personal/status`);
+  console.log(
+    '• Status URL:  ',
+    `${renderCfg.publicApi}/api/zalo/personal/status`
+  );
   console.log('• Admin:       ', 'https://hoantienvn.vercel.app/admin → Zalo Bot');
   console.log(
     '• Nhắc: đóng Zalo Web acc bot · chỉ Render chạy listener\n'
