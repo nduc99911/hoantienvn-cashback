@@ -67,34 +67,38 @@ export default function Layout() {
               Trang chủ
             </NavLink>
             <NavLink to="/guide" className={navCls}>
-              Hướng dẫn
+              Cách dùng
             </NavLink>
-            <NavLink to="/blog" className={navCls}>
-              Blog
-            </NavLink>
-            {user && (
+            {user ? (
               <>
                 <NavLink to="/dashboard" className={navCls}>
-                  Ví
-                </NavLink>
-                <NavLink to="/claim" className={navCls}>
-                  Đơn của tôi
+                  Lấy link & Ví
                 </NavLink>
                 <NavLink to="/orders" className={navCls}>
-                  Đơn
+                  Đơn hàng
+                </NavLink>
+                <NavLink to="/withdraw" className={navCls}>
+                  Rút tiền
                 </NavLink>
                 <NavLink to="/referrals" className={navCls}>
                   Mời bạn
                 </NavLink>
-                <NavLink to="/withdraw" className={navCls}>
-                  Rút
+                <NavLink to="/claim" className={navCls}>
+                  Báo thiếu
                 </NavLink>
-                {user.role === 'admin' && (
+                {(user.role === 'admin' ||
+                  user.role === 'super_admin' ||
+                  user.role === 'finance' ||
+                  user.role === 'support') && (
                   <NavLink to="/admin" className={navCls}>
                     Admin
                   </NavLink>
                 )}
               </>
+            ) : (
+              <NavLink to="/blog" className={navCls}>
+                Blog
+              </NavLink>
             )}
           </nav>
 

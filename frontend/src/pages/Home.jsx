@@ -8,41 +8,41 @@ import CommunityLinks from '../components/CommunityLinks';
 const steps = [
   {
     n: '1',
-    title: 'Sao chép link sản phẩm',
-    desc: 'Mở Shopee/TikTok, chọn sản phẩm và copy đường dẫn chia sẻ.',
+    title: 'Copy link sản phẩm Shopee',
+    desc: 'Mở app Shopee → chọn món → Chia sẻ → Sao chép liên kết.',
   },
   {
     n: '2',
-    title: 'Lấy short link & mua hàng',
-    desc: 'Dán link → tạo short link tracking. Click link rồi thanh toán trong 20–30 phút.',
+    title: 'Dán vào đây & lấy link hoàn tiền',
+    desc: 'Bấm « Lấy link hoàn tiền » → Copy link mới (hoặc Mua ngay).',
   },
   {
     n: '3',
-    title: 'Tự nhận hoàn tiền',
-    desc: 'Sub ID = mã bạn. Hệ thống import báo cáo Affiliate → hold → vào ví.',
+    title: 'Mua trong 20–30 phút',
+    desc: 'Thanh toán qua link vừa lấy. Tiền hoàn vào ví sau khi đối soát — không cần khai báo.',
   },
 ];
 
 const faqs = [
   {
-    q: 'Hoàn tiền hoạt động như thế nào?',
-    a: 'Bạn dán link sản phẩm, tạo link hoàn tiền, mua qua short link. Khi sàn đối soát hoa hồng, tiền được ghi nhận → hold → vào ví để rút.',
+    q: 'Làm sao để được hoàn tiền?',
+    a: 'Đăng ký → dán link Shopee → lấy link hoàn tiền → mua qua link đó trong 20–30 phút. Sau khi hệ thống đối soát, tiền hold rồi vào ví.',
   },
   {
-    q: 'Tôi được nhận bao nhiêu?',
-    a: 'Thường chia đến 70% hoa hồng (sau các khoản sàn giữ lại). Mức thực tế phụ thuộc ngành hàng và chương trình.',
+    q: 'Tôi được hoàn bao nhiêu?',
+    a: 'Thường nhận phần lớn hoa hồng affiliate (cấu hình site). Mức thực tế tùy ngành hàng — xem ước tính trên từng link.',
   },
   {
-    q: 'Bao lâu thì ghi nhận đơn?',
-    a: 'Sau khi admin import báo cáo Affiliate / đối soát. Tiền hold mặc định vài ngày trước khi rút được.',
+    q: 'Bao lâu tiền vào ví?',
+    a: 'Sau khi đơn được ghi nhận và hết thời gian hold (mặc định vài ngày) để tránh đơn hủy. Rồi bạn rút về bank/MoMo.',
   },
   {
-    q: 'Vì sao đơn không được ghi nhận?',
-    a: 'Có thể do click link khác, thêm SP vào giỏ trước, Adblock, hủy rồi đặt lại không qua link mới, hoặc cookie hết hạn.',
+    q: 'Vì sao không thấy đơn?',
+    a: 'Thường do mua không qua link hoàn tiền, click link khác, để giỏ cũ, Adblock, hoặc hủy đặt lại. Hãy lấy link mới rồi mua lại.',
   },
   {
     q: 'Rút tiền thế nào?',
-    a: 'Khi số dư ≥ mức tối thiểu, vào Rút tiền, nhập STK/MoMo và gửi yêu cầu. Admin xử lý chuyển khoản.',
+    a: 'Vào Rút tiền khi số dư đạt mức tối thiểu, nhập STK hoặc MoMo, gửi yêu cầu. Admin chuyển khoản.',
   },
 ];
 
@@ -90,50 +90,65 @@ export default function Home() {
       <section className="hero-bg border-b border-orange-100/50">
         <div className="mx-auto max-w-6xl px-4 py-12 md:py-16">
           <div className="mx-auto max-w-3xl text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/80 px-3 py-1 text-xs font-semibold text-shopee shadow-sm">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/80 px-3 py-1 text-xs font-semibold text-shopee shadow-sm dark:bg-slate-900/80">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Chia {share}% hoa hồng · Shopee & TikTok Shop
+              Hoàn tiền Shopee · Miễn phí dùng
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl leading-tight dark:text-white">
-              Mua sắm thông minh —{' '}
+              Mua Shopee —{' '}
               <span className="bg-gradient-to-r from-shopee to-brand-500 bg-clip-text text-transparent">
-                nhận lại tiền hoàn
+                nhận tiền về ví
               </span>
             </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-slate-600 leading-relaxed dark:text-slate-300">
-              Dán link Shopee/TikTok → short link tracking. Mua như bình thường — đối soát
-              qua báo cáo Affiliate. Giới thiệu F1 <b>{f1}%</b> · F2 <b>{f2}%</b>.
+            <p className="mx-auto mt-4 max-w-xl text-base text-slate-600 leading-relaxed dark:text-slate-300 sm:text-lg">
+              Chỉ 3 bước: <b>dán link</b> → <b>copy link hoàn tiền</b> → <b>mua</b>.
+              Tiền vào ví sau đối soát. Mời bạn: F1 <b>{f1}%</b> · F2 <b>{f2}%</b>.
             </p>
           </div>
 
-          <div className="mx-auto mt-8 max-w-3xl">
+          {/* 3 bước siêu ngắn — trước form để user hiểu ngay */}
+          <ol className="mx-auto mt-8 grid max-w-3xl gap-2 sm:grid-cols-3">
+            {steps.map((s) => (
+              <li
+                key={s.n}
+                className="flex items-start gap-2 rounded-2xl bg-white/90 px-3 py-3 text-left shadow-sm dark:bg-slate-900/80"
+              >
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-shopee text-sm font-black text-white">
+                  {s.n}
+                </span>
+                <div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">
+                    {s.title}
+                  </div>
+                  <p className="mt-0.5 text-xs leading-snug text-slate-500">{s.desc}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="mx-auto mt-6 max-w-3xl">
             <LinkConverter />
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                openTipsAgain();
-                window.location.reload();
-              }}
-              className="font-semibold text-shopee hover:underline"
-            >
-              Lưu ý khi sử dụng
-            </button>
-            <span className="text-slate-300">·</span>
-            <Link to="/guide" className="font-semibold text-shopee hover:underline">
-              Hướng dẫn lấy link
-            </Link>
-            <span className="text-slate-300">·</span>
-            <Link to="/register" className="font-semibold text-shopee hover:underline">
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <Link to="/register" className="btn-primary !py-2.5 !px-5 text-sm">
               Đăng ký miễn phí
             </Link>
+            <Link to="/guide" className="btn-secondary !py-2.5 !px-5 text-sm">
+              Xem cách dùng
+            </Link>
+            <button
+              type="button"
+              onClick={() => openTipsAgain()}
+              className="text-sm font-semibold text-slate-500 hover:text-shopee hover:underline"
+            >
+              Lưu ý quan trọng
+            </button>
           </div>
 
-          <div className="mt-6 flex flex-col items-center gap-2">
+          <div className="mt-8 flex flex-col items-center gap-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Tham gia cộng đồng
+              Bot & nhóm hỗ trợ
             </p>
             <CommunityLinks />
           </div>
@@ -262,23 +277,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Steps + video */}
+      {/* Video hướng dẫn */}
       <section className="border-y border-slate-100 bg-white py-14 dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-center text-2xl font-extrabold">3 bước nhận hoàn tiền</h2>
-          <div className="mt-8 grid gap-4 md:grid-cols-3">
-            {steps.map((s) => (
-              <div key={s.n} className="card text-center">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-shopee text-white font-bold">
-                  {s.n}
-                </div>
-                <div className="mt-3 font-bold">{s.title}</div>
-                <p className="mt-1 text-sm text-slate-500">{s.desc}</p>
-              </div>
-            ))}
-          </div>
+          <h2 className="text-center text-2xl font-extrabold">Xem video 1 phút</h2>
+          <p className="mx-auto mt-2 max-w-lg text-center text-sm text-slate-500">
+            Cùng 3 bước như trên: dán link → copy → mua
+          </p>
           {(ytId || isMp4) && (
-            <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl shadow-soft aspect-video bg-black">
+            <div className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl shadow-soft aspect-video bg-black">
               {ytId ? (
                 <iframe
                   className="h-full w-full"

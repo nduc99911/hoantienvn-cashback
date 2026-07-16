@@ -18,11 +18,10 @@ export default function LinkConverter({ compact = false }) {
     setResult(null);
     setCopied(false);
     if (!url.trim()) {
-      setError('Vui lòng dán link sản phẩm Shopee');
+      setError('Hãy dán link sản phẩm Shopee vào ô bên trên');
       return;
     }
     if (!user) {
-      // preview only then prompt login
       setLoading(true);
       try {
         const preview = await linksApi.preview(url.trim());
@@ -55,25 +54,48 @@ export default function LinkConverter({ compact = false }) {
 
   return (
     <div className={compact ? '' : 'card shadow-soft border-orange-100'}>
+      {!compact && (
+        <div className="mb-3">
+          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
+            ① Dán link → ② Copy link hoàn tiền → ③ Mua
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Copy link sản phẩm từ app Shopee (Chia sẻ → Sao chép) rồi dán vào đây.
+          </p>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-3">
+        <label className="sr-only" htmlFor="product-url">
+          Link sản phẩm
+        </label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
+            id="product-url"
             className="input flex-1 font-mono text-sm"
-            placeholder="Dán link Shopee / TikTok / Lazada..."
+            placeholder="Dán link Shopee tại đây..."
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            autoComplete="off"
+            inputMode="url"
           />
-          <button type="submit" className="btn-primary whitespace-nowrap sm:min-w-[180px]" disabled={loading}>
-            {loading ? 'Đang phân tích...' : 'Lấy Link Hoàn Tiền'}
+          <button
+            type="submit"
+            className="btn-primary whitespace-nowrap sm:min-w-[160px]"
+            disabled={loading}
+          >
+            {loading ? 'Đang xử lý...' : 'Lấy link hoàn tiền'}
           </button>
         </div>
         {error && (
-          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-300">
+            {error}
+          </div>
         )}
       </form>
 
       {result && (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white">
+        <div className="mt-5 overflow-hidden rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white dark:border-orange-900/40 dark:from-slate-900 dark:to-slate-900">
           <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
             {result.productImage && (
               <img
@@ -83,20 +105,12 @@ export default function LinkConverter({ compact = false }) {
               />
             )}
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
+              <div className="mb-1 flex flex-wrap items-center gap-2">
                 <span className="badge bg-emerald-100 text-emerald-700">
-                  Hợp lệ nhận hoàn tiền
+                  ✓ Có thể nhận hoàn tiền
                 </span>
-                {result.noApi !== false && (
-                  <span className="badge bg-sky-100 text-sky-700">Không cần API</span>
-                )}
-                {result.categoryLabel && (
-                  <span className="badge bg-slate-100 text-slate-600">
-                    {result.categoryLabel}
-                  </span>
-                )}
               </div>
-              <h3 className="font-semibold text-slate-900 line-clamp-2">
+              <h3 className="font-semibold text-slate-900 line-clamp-2 dark:text-white">
                 {result.productName}
               </h3>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-300">
@@ -108,103 +122,81 @@ export default function LinkConverter({ compact = false }) {
                       : 'Đang cập nhật'}
                   </b>
                 </span>
-                {result.shopName && (
-                  <span>
-                    Shop: <b>{result.shopName}</b>
-                  </span>
-                )}
                 <span>
-                  Tỷ lệ hoàn:{' '}
-                  <b className="text-shopee">{formatPct(result.cashbackRate)}</b>
-                </span>
-                <span>
-                  Dự kiến:{' '}
+                  Ước tính hoàn:{' '}
                   <b className="text-emerald-600">
                     {result.estimatedCashback != null
-                      ? `+${formatVnd(result.estimatedCashback)}`
-                      : '—'}
+                      ? `~${formatVnd(result.estimatedCashback)}`
+                      : formatPct(result.cashbackRate) || '—'}
                   </b>
                 </span>
               </div>
-              {result.dataSource && (
-                <div className="mt-1 text-[11px] text-slate-400">
-                  Nguồn: {result.dataSource}
-                  {result.commissionAmount != null &&
-                    ` · HH gốc ~${formatVnd(result.commissionAmount)}`}
-                </div>
-              )}
             </div>
           </div>
 
           {result.needLogin ? (
-            <div className="border-t border-orange-100 bg-white/60 px-4 py-4">
-              <p className="mb-3 text-sm text-slate-600">
-                Đăng nhập để lấy link affiliate gắn mã của bạn và theo dõi đơn hoàn tiền.
+            <div className="border-t border-orange-100 bg-white/70 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/50">
+              <p className="mb-1 font-semibold text-slate-800 dark:text-slate-100">
+                Bước tiếp: Đăng nhập để lấy link của bạn
+              </p>
+              <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
+                Link sẽ gắn mã riêng — đơn mua sau này cộng vào đúng ví của bạn.
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
                   className="btn-primary"
-                  onClick={() => navigate('/login', { state: { from: '/', url } })}
+                  onClick={() =>
+                    navigate('/login', { state: { from: '/', url } })
+                  }
                 >
-                  Đăng nhập để lấy link
+                  Đăng nhập
                 </button>
-                <button className="btn-secondary" onClick={() => navigate('/register')}>
-                  Đăng ký miễn phí
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => navigate('/register')}
+                >
+                  Tạo tài khoản miễn phí
                 </button>
               </div>
             </div>
           ) : (
-            <div className="border-t border-orange-100 bg-white/60 px-4 py-4 space-y-3">
+            <div className="border-t border-orange-100 bg-white/70 px-4 py-4 space-y-4 dark:border-slate-700 dark:bg-slate-800/50">
+              <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                <b>Bước tiếp theo:</b> Copy link → mở Shopee → mua trong{' '}
+                <b>20–30 phút</b>. Không cần khai báo đơn.
+              </div>
               <div>
-                <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Short link (rút gọn)
+                <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Link hoàn tiền của bạn
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     readOnly
                     className="input font-mono text-xs"
                     value={result.shortUrl || result.affiliateUrl}
+                    onFocus={(e) => e.target.select()}
                   />
                   <button type="button" className="btn-secondary" onClick={copyLink}>
-                    {copied ? 'Đã copy!' : 'Copy'}
+                    {copied ? '✓ Đã copy' : 'Copy link'}
                   </button>
                   <a
                     href={result.affiliateUrl || result.shortUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="btn-primary"
+                    className="btn-primary text-center"
                   >
-                    Mua ngay
+                    Mua ngay trên Shopee
                   </a>
                 </div>
               </div>
-              {result.affiliateUrl && (
-                <div>
-                  <div className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">
-                    Link Shopee an_redir (affiliate)
-                  </div>
-                  <input
-                    readOnly
-                    className="input font-mono text-[11px]"
-                    value={result.affiliateUrl}
-                  />
-                  {result.subId && (
-                    <p className="mt-1 text-xs text-slate-400">
-                      sub_id: <code className="text-shopee font-semibold">{result.subId}</code>
-                      {result.originLink && (
-                        <>
-                          {' '}
-                          · origin: <code>{result.originLink}</code>
-                        </>
-                      )}
-                    </p>
-                  )}
-                </div>
+              {result.subId && (
+                <p className="text-xs text-slate-400">
+                  Mã theo dõi (tự động):{' '}
+                  <code className="font-semibold text-shopee">{result.subId}</code>
+                </p>
               )}
-              <p className="text-xs text-slate-500">
-                Click short link → Shopee ghi nhận <b>sub_id = mã bạn</b>. Mua trong 20–30
-                phút. <b>Không cần khai báo</b> — đơn tự vào khi import báo cáo Affiliate.
-              </p>
             </div>
           )}
         </div>

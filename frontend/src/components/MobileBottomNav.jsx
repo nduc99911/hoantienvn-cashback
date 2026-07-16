@@ -13,32 +13,50 @@ export default function MobileBottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95 pb-safe">
       <div className="mx-auto flex max-w-lg">
         <NavLink to="/" end className={linkCls}>
-          <span className="text-lg">🏠</span>
+          <span className="text-lg" aria-hidden>
+            🏠
+          </span>
           Trang chủ
-        </NavLink>
-        <NavLink to="/guide" className={linkCls}>
-          <span className="text-lg">📖</span>
-          Hướng dẫn
         </NavLink>
         {user ? (
           <>
             <NavLink to="/dashboard" className={linkCls}>
-              <span className="text-lg">💰</span>
-              Ví
+              <span className="text-lg" aria-hidden>
+                💰
+              </span>
+              Lấy link / Ví
             </NavLink>
-            <NavLink to="/referrals" className={linkCls}>
-              <span className="text-lg">👥</span>
-              Mời bạn
+            <NavLink to="/orders" className={linkCls}>
+              <span className="text-lg" aria-hidden>
+                📦
+              </span>
+              Đơn hàng
+            </NavLink>
+            <NavLink to="/withdraw" className={linkCls}>
+              <span className="text-lg" aria-hidden>
+                🏦
+              </span>
+              Rút tiền
             </NavLink>
           </>
         ) : (
           <>
+            <NavLink to="/guide" className={linkCls}>
+              <span className="text-lg" aria-hidden>
+                📖
+              </span>
+              Cách dùng
+            </NavLink>
             <NavLink to="/login" className={linkCls}>
-              <span className="text-lg">🔑</span>
+              <span className="text-lg" aria-hidden>
+                🔑
+              </span>
               Đăng nhập
             </NavLink>
             <NavLink to="/register" className={linkCls}>
-              <span className="text-lg">✨</span>
+              <span className="text-lg" aria-hidden>
+                ✨
+              </span>
               Đăng ký
             </NavLink>
           </>

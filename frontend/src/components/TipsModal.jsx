@@ -2,28 +2,29 @@ import { useEffect, useState } from 'react';
 
 const TIPS = [
   {
-    t: 'Tạo giỏ hàng trống trước khi mua',
-    d: 'Đảm bảo giỏ Shopee/TikTok chưa có sản phẩm đó. Click link hoàn tiền rồi mới thêm vào giỏ và thanh toán.',
+    t: 'Giỏ hàng trống sản phẩm đó',
+    d: 'Chưa có món trong giỏ. Click link hoàn tiền rồi mới thêm vào giỏ và thanh toán.',
   },
   {
-    t: 'Không bấm link chia sẻ khác',
-    d: 'Từ lúc click link đến khi thanh toán xong, không click link affiliate/KOL khác để tránh ghi đè tracking.',
+    t: 'Không bấm link mua khác',
+    d: 'Từ lúc mở link đến khi thanh toán xong, đừng click link Shopee/KOL khác.',
   },
   {
-    t: 'Thanh toán trong 20–30 phút',
-    d: 'Cookie theo dõi có thời hạn. Nên hoàn tất đơn nhanh sau khi mở link.',
+    t: 'Mua trong 20–30 phút',
+    d: 'Nên thanh toán sớm sau khi mở link hoàn tiền.',
   },
   {
-    t: 'Tắt Adblock',
-    d: 'Trình chặn quảng cáo có thể chặn mã tracking, khiến đơn không được ghi nhận.',
+    t: 'Tắt chặn quảng cáo (Adblock)',
+    d: 'Adblock có thể làm mất theo dõi — đơn không vào ví.',
   },
   {
-    t: 'Hủy đơn rồi đặt lại',
-    d: 'Phải quay lại web lấy link mới và click lại từ đầu — không đặt lại trực tiếp trên app.',
+    t: 'Hủy rồi đặt lại',
+    d: 'Phải lấy link hoàn tiền mới và mua lại từ đầu — không đặt lại thẳng trên app.',
   },
 ];
 
 const KEY = 'hoantien_tips_seen_v1';
+const EVT = 'hoantien_open_tips';
 
 export default function TipsModal({ forceOpen = false, onClose }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +41,14 @@ export default function TipsModal({ forceOpen = false, onClose }) {
     }
   }, [forceOpen]);
 
+  useEffect(() => {
+    function onOpen() {
+      setOpen(true);
+    }
+    window.addEventListener(EVT, onOpen);
+    return () => window.removeEventListener(EVT, onOpen);
+  }, []);
+
   function dismiss() {
     try {
       localStorage.setItem(KEY, '1');
@@ -53,11 +62,18 @@ export default function TipsModal({ forceOpen = false, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
+    <div
+      className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tips-title"
+    >
       <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-white p-5 shadow-xl dark:bg-slate-900">
-        <h2 className="text-xl font-extrabold">Lưu ý khi mua hàng hoàn tiền</h2>
+        <h2 id="tips-title" className="text-xl font-extrabold">
+          5 lưu ý để được hoàn tiền
+        </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Làm đúng các bước sau để đơn được ghi nhận.
+          Làm đúng để đơn được ghi nhận — chỉ hiện lần đầu (xem lại bất cứ lúc nào).
         </p>
         <ol className="mt-5 space-y-4">
           {TIPS.map((tip, i) => (
@@ -73,7 +89,7 @@ export default function TipsModal({ forceOpen = false, onClose }) {
           ))}
         </ol>
         <button type="button" className="btn-primary mt-6 w-full" onClick={dismiss}>
-          Đã hiểu
+          Đã hiểu — bắt đầu mua
         </button>
       </div>
     </div>
@@ -86,4 +102,5 @@ export function openTipsAgain() {
   } catch {
     /* ignore */
   }
+  window.dispatchEvent(new Event(EVT));
 }

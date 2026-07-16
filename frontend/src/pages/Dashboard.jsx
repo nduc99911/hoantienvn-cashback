@@ -128,53 +128,103 @@ export default function Dashboard() {
     );
   }
 
+  const needTg = tg && !tg.linked;
+  const needZalo = zalo && !zalo.linked;
+  const bal = Number(summary.balance) || 0;
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 space-y-8">
-      <div>
-        <h1 className="text-2xl font-extrabold">Xin chào, {user?.name}</h1>
-        <p className="text-slate-500 text-sm mt-1">
-          Mã giới thiệu:{' '}
-          <span className="font-mono font-bold text-shopee">{summary.referralCode}</span>
-          {' · '}
-          Sub ID Shopee:{' '}
-          <span className="font-mono font-bold text-shopee">
-            {user?.affSubId || `U${user?.id}_${summary.referralCode}`}
-          </span>
-        </p>
-        <p className="text-xs text-slate-400 mt-1">
-          Mua qua link là đủ — không cần form khai báo. Đơn tự map theo Sub ID khi import báo cáo Aff.
+    <div className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold">
+            Xin chào, {user?.name?.split(' ')[0] || user?.name}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Bắt đầu bằng cách <b>dán link Shopee</b> bên dưới — đơn sẽ vào ví sau đối soát.
+          </p>
+        </div>
+        <Link to="/withdraw" className="btn-primary !py-2.5 text-sm shrink-0">
+          Rút tiền {bal > 0 ? `(${formatVnd(bal)})` : ''}
+        </Link>
+      </div>
+
+      {/* Checklist bước tiếp theo */}
+      <div className="card border-orange-100 bg-gradient-to-br from-orange-50/90 to-white dark:from-slate-900 dark:to-slate-900">
+        <h2 className="font-bold text-base">Bạn nên làm gì tiếp?</h2>
+        <ul className="mt-3 space-y-2 text-sm">
+          <li className="flex gap-2">
+            <span className="text-emerald-600 font-bold">1.</span>
+            <span>
+              <b>Lấy link hoàn tiền</b> — dán link Shopee vào ô phía dưới → Copy → Mua.
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className={needTg || needZalo ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>
+              2.
+            </span>
+            <span>
+              {(tg?.linked || zalo?.linked) && (
+                <>
+                  ✓ Đã gắn bot
+                  {tg?.linked ? ' Telegram' : ''}
+                  {zalo?.linked ? ' Zalo' : ''}.{' '}
+                </>
+              )}
+              {needTg || needZalo ? (
+                <>
+                  <b>Tuỳ chọn:</b> gắn bot để chat lấy link — tạo mã ở phần Telegram/Zalo
+                  bên dưới.
+                </>
+              ) : (
+                <>Có thể lấy link trên web hoặc bot.</>
+              )}
+            </span>
+          </li>
+          <li className="flex gap-2">
+            <span className="text-slate-400 font-bold">3.</span>
+            <span>
+              Xem <Link className="text-shopee font-semibold underline" to="/orders">Đơn hàng</Link>
+              {' · '}
+              <Link className="text-shopee font-semibold underline" to="/withdraw">Rút tiền</Link>
+              {' '}khi có số dư (hold {summary.holdDays || 7} ngày).
+            </span>
+          </li>
+        </ul>
+        <p className="mt-3 text-xs text-slate-400">
+          Mã mời bạn: <code className="font-bold text-shopee">{summary.referralCode}</code>
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <Stat
-          label="Số dư khả dụng"
+          label="Có thể rút"
           value={formatVnd(summary.balance)}
           accent="text-emerald-600"
+          hint="Số dư khả dụng"
         />
         <Stat
-          label="Đang hold"
-          value={formatVnd(summary.heldBalance || summary.heldCashback)}
-          accent="text-purple-600"
-        />
-        <Stat
-          label="Chờ duyệt"
-          value={formatVnd(summary.pendingBalance)}
+          label="Đang chờ"
+          value={formatVnd(
+            (summary.heldBalance || summary.heldCashback || 0) +
+              (summary.pendingBalance || 0)
+          )}
           accent="text-amber-600"
+          hint="Hold + chờ duyệt"
         />
-        <Stat label="Tổng đơn" value={summary.totalOrders} />
+        <Stat label="Số đơn" value={summary.totalOrders} hint="Đã ghi nhận" />
         <Stat
-          label="HH giới thiệu"
+          label="Hoa hồng mời bạn"
           value={formatVnd(summary.referralEarn)}
           accent="text-shopee"
+          hint="F1 + F2"
         />
       </div>
-      <p className="text-xs text-slate-400">
-        Hold mặc định {summary.holdDays || 7} ngày sau khi admin duyệt (chống đơn hủy).
-      </p>
 
-      <div className="card">
-        <h2 className="mb-3 font-bold text-lg">Lấy link hoàn tiền</h2>
+      <div className="card border-2 border-shopee/20 shadow-soft">
+        <h2 className="mb-1 font-extrabold text-lg">Lấy link hoàn tiền</h2>
+        <p className="mb-3 text-sm text-slate-500">
+          Đây là thao tác chính — dán link sản phẩm Shopee.
+        </p>
         <LinkConverter compact />
       </div>
 
@@ -480,11 +530,16 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ label, value, accent }) {
+function Stat({ label, value, accent, hint }) {
   return (
-    <div className="card">
-      <div className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</div>
-      <div className={`mt-1 text-2xl font-extrabold ${accent || 'text-slate-900'}`}>{value}</div>
+    <div className="card !p-4">
+      <div className="text-xs font-medium text-slate-400">{label}</div>
+      <div
+        className={`mt-1 text-xl font-extrabold sm:text-2xl ${accent || 'text-slate-900 dark:text-white'}`}
+      >
+        {value}
+      </div>
+      {hint && <div className="mt-0.5 text-[11px] text-slate-400">{hint}</div>}
     </div>
   );
 }

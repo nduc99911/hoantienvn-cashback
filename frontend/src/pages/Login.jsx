@@ -8,17 +8,21 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const [params] = useSearchParams();
-  const [email, setEmail] = useState('demo@hoantien.vn');
-  const [password, setPassword] = useState('demo123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleOn, setGoogleOn] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     if (params.get('error')) setError(params.get('error'));
     publicApi
       .config()
-      .then((c) => setGoogleOn(Boolean(c.googleAuthEnabled)))
+      .then((c) => {
+        setGoogleOn(Boolean(c.googleAuthEnabled));
+        setDemoMode(Boolean(c.demoMode));
+      })
       .catch(() => {});
   }, [params]);
 
@@ -41,17 +45,24 @@ export default function Login() {
       <div className="card shadow-soft">
         <h1 className="text-2xl font-extrabold">Đăng nhập</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Demo: <code className="text-shopee">demo@hoantien.vn</code> / demo123
+          Vào ví, lấy link hoàn tiền và rút tiền.
         </p>
+        {demoMode && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            Demo: <code>demo@hoantien.vn</code> / demo123
+          </p>
+        )}
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium">Email</label>
             <input
               className="input"
               type="email"
+              placeholder="email@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
             />
           </div>
           <div>
@@ -59,9 +70,11 @@ export default function Login() {
             <input
               className="input"
               type="password"
+              placeholder="Mật khẩu của bạn"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
             />
           </div>
           {error && (
