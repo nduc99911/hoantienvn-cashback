@@ -57,6 +57,44 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+/** Keep-alive nhẹ cho Render free (tránh sleep ~15 phút không traffic) */
+app.get('/api/ping', (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    t: Date.now(),
+    engine: isPostgres ? 'postgres' : 'sqlite',
+  });
+});
+
+/**
+ * Tick ngoài (GitHub Actions / UptimeRobot / cron-job.org)
+ * - Luôn trả 200 để giữ instance warm
+ * - Nếu header x-cron-secret đúng → chạy release hold
+ */
+app.all('/api/cron/tick', async (req, res) => {
+  const secret = process.env.CRON_SECRET || '';
+  const got =
+    req.get('x-cron-secret') ||
+    req.query.secret ||
+    req.body?.secret ||
+    '';
+  let hold = null;
+  if (secret && got && secret === got) {
+    try {
+      hold = await releaseHeldOrders();
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e.message });
+    }
+  }
+  res.json({
+    ok: true,
+    t: Date.now(),
+    hold: hold
+      ? { released: hold.released, totalAmount: hold.totalAmount }
+      : null,
+  });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/wallet', walletRoutes);

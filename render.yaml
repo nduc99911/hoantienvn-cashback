@@ -1,18 +1,22 @@
-# Deploy backend free tier: https://render.com
-# Frontend riêng trên Vercel
+# Blueprint: https://dashboard.render.com/blueprints
+# Backend free + keep-alive ngoài (GitHub Actions) — xem RENDER.md
+
 services:
   - type: web
     name: hoantienvn-api
     runtime: node
     rootDir: backend
     plan: free
+    region: singapore
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /api/health
+    healthCheckPath: /api/ping
     envVars:
       - key: NODE_ENV
         value: production
       - key: JWT_SECRET
+        generateValue: true
+      - key: CRON_SECRET
         generateValue: true
       - key: DATABASE_URL
         sync: false
@@ -31,4 +35,4 @@ services:
       - key: HOLD_DAYS
         value: "7"
       - key: SITE_URL
-        sync: false
+        value: "https://hoantienvn.vercel.app"

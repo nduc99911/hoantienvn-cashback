@@ -1,0 +1,54 @@
+# Giữ Render Free không sleep: ping mỗi 10 phút (< 15 phút idle)
+# Secrets (repo Settings → Secrets and variables → Actions):
+#   RENDER_API_URL = https://hoantienvn-api.onrender.com  (không slash cuối)
+#   CRON_SECRET    = cùng giá trị env CRON_SECRET trên Render (tuỳ chọn)
+
+name: Keep-alive Render
+
+on:
+  schedule:
+    # Mỗi 10 phút (UTC)
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /api/ping (wake)
+        env:
+          BASE: ${{ secrets.RENDER_API_URL }}
+        run: |
+          if [ -z "$BASE" ]; then
+            echo "Missing secret RENDER_API_URL — skip"
+            exit 0
+          fi
+          BASE="${BASE%/}"
+          code=$(curl -sS -o /tmp/ping.json -w "%{http_code}" --max-time 45 "${BASE}/api/ping" || echo "000")
+          echo "ping HTTP $code"
+          cat /tmp/ping.json 2>/dev/null || true
+          # Không fail job nếu cold start chậm — lần sau sẽ warm
+          if [ "$code" != "200" ]; then
+            echo "warn: non-200, will retry tick"
+          fi
+
+      - name: Cron tick (hold release nếu có CRON_SECRET)
+        env:
+          BASE: ${{ secrets.RENDER_API_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BASE" ]; then
+            exit 0
+          fi
+          BASE="${BASE%/}"
+          if [ -n "$SECRET" ]; then
+            curl -sS --max-time 60 -X POST "${BASE}/api/cron/tick" \
+              -H "x-cron-secret: ${SECRET}" \
+              -H "Content-Type: application/json" \
+              -d '{}' || true
+          else
+            curl -sS --max-time 45 "${BASE}/api/cron/tick" || true
+          fi
+          echo
+          echo "keep-alive done at $(date -u +%Y-%m-%dT%H:%M:%SZ)"

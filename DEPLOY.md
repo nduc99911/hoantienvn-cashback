@@ -1,7 +1,8 @@
 # Deploy HoanTienVN
 
-> **Lưu ý quan trọng:** Backend (Express + SQLite + Telegram polling) **không chạy tốt trên Vercel serverless**.  
-> Cách đúng: **Frontend → Vercel** · **Backend → Railway / Render / VPS**.
+> **Lưu ý quan trọng:** Backend (Express + Telegram polling) **không chạy tốt trên Vercel serverless**.  
+> Cách đúng: **Frontend → Vercel** · **Backend → Render Free** (khuyến nghị) / Railway / VPS.  
+> Chi tiết Render + chống sleep: **[RENDER.md](./RENDER.md)**
 
 ## 1. GitHub
 
