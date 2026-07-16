@@ -42,9 +42,7 @@ export default function Admin() {
   const [filter, setFilter] = useState('pending_review');
   const [csv, setCsv] = useState('');
   const [importPreview, setImportPreview] = useState(null);
-  const [importFilePath, setImportFilePath] = useState(
-    'C:\\Users\\nduc9\\Downloads\\AffiliateCommissionReport_202607160810.csv'
-  );
+  const [importFileName, setImportFileName] = useState('');
   const [blogForm, setBlogForm] = useState({
     title: '',
     excerpt: '',
@@ -490,61 +488,72 @@ export default function Admin() {
         <div className="card space-y-4">
           <h2 className="font-bold">Import báo cáo Shopee Aff</h2>
           <p className="text-sm text-slate-500">
-            File chuẩn:{' '}
-            <code className="text-xs">AffiliateCommissionReport_*.csv</code> (UTF-8) từ
-            portal affiliate.shopee.vn. Hệ thống đọc cột tiếng Việt, gộp nhiều SP/1 đơn,
-            map <b>Sub_id1</b> → user, bỏ đơn hủy, hold tự động.
+            Tải file{' '}
+            <code className="text-xs">AffiliateCommissionReport_*.csv</code> từ
+            affiliate.shopee.vn → chọn file bên dưới. Map <b>Sub_id1</b> → user, bỏ đơn
+            hủy, hold tự động.
           </p>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Đường dẫn file trên máy (nhanh)
+          {/* Chọn file từ máy — mở hộp thoại folder/file của trình duyệt */}
+          <div className="rounded-xl border-2 border-dashed border-orange-200 bg-orange-50/50 p-4 dark:border-orange-900 dark:bg-orange-950/20">
+            <label className="mb-2 block text-sm font-bold text-slate-800 dark:text-slate-100">
+              1. Chọn file CSV trên máy
             </label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                className="input font-mono text-xs flex-1"
-                value={importFilePath}
-                onChange={(e) => setImportFilePath(e.target.value)}
-                placeholder="C:\Users\...\Downloads\AffiliateCommissionReport_....csv"
-              />
-              <button
-                type="button"
-                className="btn-primary whitespace-nowrap"
-                onClick={() =>
-                  act(async () => {
-                    const r = await adminApi.importOrders({
-                      filePath: importFilePath,
-                      autoHold: true,
-                    });
-                    setMsg(
-                      `Import: ${r.imported} OK · ${r.failed} lỗi · skip ${r.skipped || 0}` +
-                        (r.meta?.format ? ` · format=${r.meta.format}` : '')
-                    );
-                    setImportPreview(null);
-                    await load();
-                    return r;
-                  }, 'Import file xong')
-                }
-              >
-                Import file
-              </button>
-            </div>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-xl file:border-0 file:bg-shopee file:px-4 file:py-2.5 file:text-sm file:font-semibold file:text-white hover:file:brightness-110 dark:text-slate-300"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImportFileName(file.name);
+                setMsg(`Đang đọc ${file.name}…`);
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const text = String(reader.result || '');
+                  setCsv(text);
+                  setMsg(
+                    `Đã chọn: ${file.name} (${Math.round(text.length / 1024)} KB). Bấm « Xem trước » hoặc « Import & Hold ».`
+                  );
+                };
+                reader.onerror = () => {
+                  setMsg('Không đọc được file. Thử dán CSV hoặc chọn file khác.');
+                };
+                // UTF-8 — Shopee CSV thường UTF-8 / UTF-8 BOM
+                reader.readAsText(file, 'UTF-8');
+                // cho phép chọn lại cùng file
+                e.target.value = '';
+              }}
+            />
+            {importFileName && (
+              <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                ✓ File: {importFileName}
+                {csv ? ` · ${csv.split('\n').length} dòng` : ''}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-slate-500">
+              Nút « Chọn tệp » / « Browse » mở thư mục máy bạn (Downloads, Desktop…).
+            </p>
           </div>
 
           <div className="border-t border-slate-100 pt-4 dark:border-slate-800">
             <label className="mb-1 block text-sm font-medium">
-              Hoặc dán nội dung CSV
+              2. Nội dung CSV (tự điền sau khi chọn file — hoặc dán tay)
             </label>
             <textarea
-              className="input font-mono text-xs min-h-[160px]"
+              className="input font-mono text-xs min-h-[140px]"
               value={csv}
-              onChange={(e) => setCsv(e.target.value)}
-              placeholder="Dán full AffiliateCommissionReport CSV..."
+              onChange={(e) => {
+                setCsv(e.target.value);
+                if (!e.target.value) setImportFileName('');
+              }}
+              placeholder="Chọn file ở trên, hoặc dán full CSV AffiliateCommissionReport..."
             />
-            <div className="mt-2 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
                 className="btn-secondary"
+                disabled={!csv.trim()}
                 onClick={() =>
                   act(async () => {
                     const p = await adminApi.importPreview(csv);
@@ -561,12 +570,15 @@ export default function Admin() {
               <button
                 type="button"
                 className="btn-primary"
+                disabled={!csv.trim()}
                 onClick={() =>
                   act(async () => {
                     const r = await adminApi.importOrders({ csv, autoHold: true });
                     setMsg(
-                      `Import: ${r.imported} OK · ${r.failed} lỗi · skip ${r.skipped || 0}`
+                      `Import: ${r.imported} OK · ${r.failed} lỗi · skip ${r.skipped || 0}` +
+                        (importFileName ? ` · ${importFileName}` : '')
                     );
+                    setImportPreview(null);
                     await load();
                     return r;
                   }, 'Import CSV xong')
