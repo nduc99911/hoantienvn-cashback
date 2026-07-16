@@ -85,24 +85,6 @@ export default function Dashboard() {
     load().catch(console.error);
   }, []);
 
-  async function createDemoOrder() {
-    setBusy(true);
-    setMsg('');
-    try {
-      const r = await walletApi.demoOrder({
-        productName: 'Đơn demo — Tai nghe Bluetooth',
-        orderAmount: 250000,
-        commission: 35000,
-      });
-      setMsg(`Đã tạo đơn tạm tính +${formatVnd(r.cashback)}. Vào Đơn hàng để xác nhận hoàn tất.`);
-      await load();
-    } catch (e) {
-      setMsg(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   if (!summary) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-16 text-center text-slate-500">
@@ -382,12 +364,10 @@ export default function Dashboard() {
         <Link to="/claim" className="btn-secondary">
           Báo đơn thiếu
         </Link>
-        <button className="btn-secondary" onClick={createDemoOrder} disabled={busy}>
-          {busy ? '...' : '🧪 Đơn demo'}
-        </button>
       </div>
       <p className="text-xs text-slate-400">
-        Luồng chính: lấy link (sub_id cố định) → mua → admin import CSV Shopee → hold → ví.
+        Luồng chính: lấy link (sub_id) → mua → admin import CSV Aff → hold → ví. Không
+        cần bấm xác nhận đơn.
       </p>
       {msg && (
         <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{msg}</div>

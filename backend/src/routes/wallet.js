@@ -179,7 +179,13 @@ router.get('/referrals', requireAuth, async (req, res) => {
   });
 });
 
+/** Demo only — staff. User thật: import CSV Aff, không tự xác nhận đơn. */
 router.post('/demo-order', requireAuth, async (req, res) => {
+  if (!['admin', 'super_admin'].includes(req.user.role)) {
+    return res.status(403).json({
+      error: 'Chỉ admin test. User: mua qua link + import báo cáo Aff.',
+    });
+  }
   try {
     const amount = Number(req.body.orderAmount) || 250000;
     const commission = Number(req.body.commission) || Math.round(amount * 0.14);
@@ -205,11 +211,18 @@ router.post('/demo-order', requireAuth, async (req, res) => {
   }
 });
 
+/** Demo only — staff. Không mở cho user tự “hoàn tất” đơn thật. */
 router.post('/orders/:id/complete', requireAuth, async (req, res) => {
   try {
+    if (!['admin', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({
+        error:
+          'Không cần xác nhận. Đơn được ghi nhận khi admin import báo cáo Affiliate.',
+      });
+    }
     const order = await one('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn' });
-    if (order.user_id !== req.user.id && req.user.role !== 'admin') {
+    if (order.user_id !== req.user.id && req.user.role !== 'admin' && req.user.role !== 'super_admin') {
       return res.status(403).json({ error: 'Không có quyền' });
     }
     if (order.status === 'paid') {
