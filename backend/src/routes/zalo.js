@@ -14,6 +14,10 @@ import { getSetting, one, many, run } from '../db/schema.js';
 
 const router = Router();
 
+function isStaff(u) {
+  return ['admin', 'super_admin', 'finance', 'support'].includes(u?.role);
+}
+
 /**
  * Zalo webhook verification (một số setup dùng GET)
  * GET /api/zalo/webhook?verify=xxx
@@ -77,14 +81,14 @@ router.get('/personal/status', (_req, res) => {
 
 /** Admin: chi tiết + restart listener */
 router.get('/personal/admin-status', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+  if (!isStaff(req.user)) {
     return res.status(403).json({ error: 'Admin only' });
   }
   res.json(zcaStatus());
 });
 
 router.post('/personal/restart', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+  if (!isStaff(req.user)) {
     return res.status(403).json({ error: 'Admin only' });
   }
   stopZcaPersonal();
@@ -122,7 +126,7 @@ router.get('/bind-status', requireAuth, async (req, res) => {
 
 /** Admin: test gửi tin Zalo */
 router.post('/test', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (!isStaff(req.user)) {
     return res.status(403).json({ error: 'Admin only' });
   }
   const { zaloUserId, text } = req.body;
@@ -143,7 +147,7 @@ router.post('/test', requireAuth, async (req, res) => {
 
 /** Admin: xem user đã gắn Zalo */
 router.get('/linked-users', requireAuth, async (req, res) => {
-  if (req.user.role !== 'admin') {
+  if (!isStaff(req.user)) {
     return res.status(403).json({ error: 'Admin only' });
   }
   const rows = await many(

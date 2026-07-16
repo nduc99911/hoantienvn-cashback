@@ -23,11 +23,46 @@ let sendOk = 0;
 let sendFail = 0;
 let restartTimer = null;
 
+/**
+ * Bật/tắt runtime: ưu tiên setting Admin (zalo_personal_enabled).
+ * Env ZCA_ENABLED=0 = kill switch cứng (không bật được từ Admin).
+ * Env ZCA_ENABLED=1 chỉ là default khi DB chưa có key.
+ */
 export function isZcaEnabled() {
   const env = process.env.ZCA_ENABLED;
   if (env === '0' || env === 'false') return false;
-  if (env === '1' || env === 'true') return true;
-  return getSetting('zalo_personal_enabled', '0') === '1';
+  const fromDb = getSetting('zalo_personal_enabled', null);
+  if (fromDb === '1' || fromDb === '0') return fromDb === '1';
+  return env === '1' || env === 'true';
+}
+
+export function isZcaAllowGroup() {
+  const env = process.env.ZCA_ALLOW_GROUP;
+  if (env === '0' || env === 'false') return false;
+  const fromDb = getSetting('zalo_personal_allow_group', null);
+  if (fromDb === '1' || fromDb === '0') return fromDb === '1';
+  return env === '1' || env === 'true';
+}
+
+/** Áp dụng setting Admin: bật → start, tắt → stop */
+export async function applyZcaFromSettings() {
+  if (!isZcaEnabled()) {
+    if (api) {
+      stopZcaPersonal();
+      console.log('[zca] stopped by admin setting');
+    }
+    return { ok: true, action: 'stopped', status: zcaStatus() };
+  }
+  if (api) {
+    // đã online — group flag đọc mỗi tin, không cần restart
+    return { ok: true, action: 'already_online', status: zcaStatus() };
+  }
+  const started = await startZcaPersonal();
+  return {
+    ok: Boolean(started),
+    action: started ? 'started' : 'start_failed',
+    status: zcaStatus(),
+  };
 }
 
 export function isZcaOnline() {
@@ -243,10 +278,6 @@ export async function startZcaPersonal() {
       }
     }
 
-    const allowGroup =
-      process.env.ZCA_ALLOW_GROUP === '1' ||
-      getSetting('zalo_personal_allow_group', '0') === '1';
-
     // Auto accept friend request — cần để reply 1-1 ổn định
     newApi.listener.on('friend_event', async (ev) => {
       try {
@@ -279,8 +310,8 @@ export async function startZcaPersonal() {
             }
             const isUser = message.type === ThreadType.User;
             const isGroup = message.type === ThreadType.Group;
-            if (isGroup && !allowGroup) {
-              console.log('[zca] skip group (ZCA_ALLOW_GROUP=0)');
+            if (isGroup && !isZcaAllowGroup()) {
+              console.log('[zca] skip group (zalo_personal_allow_group=0)');
               return;
             }
             if (!isUser && !isGroup) return;
@@ -401,9 +432,8 @@ export function zcaStatus() {
     ownUid: ownUid || null,
     sessionPath: sessionPath(),
     hasCredentials: Boolean(loadZcaCredentials()),
-    allowGroup:
-      process.env.ZCA_ALLOW_GROUP === '1' ||
-      getSetting('zalo_personal_allow_group', '0') === '1',
+    allowGroup: isZcaAllowGroup(),
+    killSwitch: process.env.ZCA_ENABLED === '0' || process.env.ZCA_ENABLED === 'false',
     stats: {
       msgCount,
       sendOk,

@@ -180,11 +180,95 @@ router.put('/settings', async (req, res) => {
     'zalo_webhook_verify',
     'zalo_bot_enabled',
     'zalo_welcome',
+    'zalo_personal_enabled',
+    'zalo_personal_allow_group',
   ];
   for (const key of allowed) {
     if (req.body[key] !== undefined) await setSetting(key, req.body[key]);
   }
-  res.json({ settings: await getAllSettings(), success: true });
+
+  // Áp dụng bật/tắt Zalo personal ngay sau khi lưu
+  let zca = null;
+  try {
+    const { applyZcaFromSettings } = await import('../services/zcaPersonal.js');
+    zca = await applyZcaFromSettings();
+  } catch (e) {
+    zca = { ok: false, error: e.message };
+  }
+
+  res.json({
+    settings: await getAllSettings(),
+    success: true,
+    zca,
+  });
+});
+
+/** Admin: trạng thái + bật/tắt nhanh Zalo personal */
+router.get('/zalo-personal/status', async (_req, res) => {
+  try {
+    const { zcaStatus } = await import('../services/zcaPersonal.js');
+    res.json(zcaStatus());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/zalo-personal/toggle', async (req, res) => {
+  try {
+    const { zcaStatus, stopZcaPersonal, startZcaPersonal } = await import(
+      '../services/zcaPersonal.js'
+    );
+
+    const enabled =
+      req.body?.enabled === true ||
+      req.body?.enabled === 1 ||
+      req.body?.enabled === '1';
+    await setSetting('zalo_personal_enabled', enabled ? '1' : '0');
+
+    if (req.body?.allowGroup !== undefined) {
+      const g =
+        req.body.allowGroup === true ||
+        req.body.allowGroup === 1 ||
+        req.body.allowGroup === '1';
+      await setSetting('zalo_personal_allow_group', g ? '1' : '0');
+    }
+    if (req.body?.welcome !== undefined) {
+      await setSetting('zalo_welcome', String(req.body.welcome || ''));
+    }
+
+    let action;
+    if (!enabled) {
+      stopZcaPersonal();
+      action = 'stopped';
+    } else {
+      stopZcaPersonal();
+      const api = await startZcaPersonal();
+      action = api ? 'started' : 'start_failed';
+    }
+
+    res.json({
+      ok: true,
+      action,
+      zalo_personal_enabled: getSetting('zalo_personal_enabled', '0'),
+      zalo_personal_allow_group: getSetting('zalo_personal_allow_group', '0'),
+      status: zcaStatus(),
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+router.post('/zalo-personal/restart', async (_req, res) => {
+  try {
+    const { stopZcaPersonal, startZcaPersonal, zcaStatus } = await import(
+      '../services/zcaPersonal.js'
+    );
+    stopZcaPersonal();
+    const api = await startZcaPersonal();
+    res.json({ ok: Boolean(api), status: zcaStatus() });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.post(

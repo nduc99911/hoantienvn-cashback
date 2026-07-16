@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { adminApi, blogApi, formatVnd, telegramApi, vouchersApi } from '../lib/api';
+import {
+  adminApi,
+  blogApi,
+  formatVnd,
+  telegramApi,
+  vouchersApi,
+  zaloApi,
+} from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import { Navigate } from 'react-router-dom';
 
@@ -15,6 +22,7 @@ const TABS = [
   ['marketing', 'Email MKT'],
   ['vouchers', 'Voucher'],
   ['telegram', 'Telegram Bot'],
+  ['zalo', 'Zalo Bot'],
   ['blog', 'Blog'],
   ['settings', 'Cấu hình'],
 ];
@@ -46,6 +54,9 @@ export default function Admin() {
   const [tgUsers, setTgUsers] = useState([]);
   const [tgStatus, setTgStatus] = useState(null);
   const [tgTestId, setTgTestId] = useState('');
+  const [zaloStatus, setZaloStatus] = useState(null);
+  const [zaloUsers, setZaloUsers] = useState([]);
+  const [zaloWelcome, setZaloWelcome] = useState('');
   const [ops, setOps] = useState(null);
   const [comms, setComms] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
@@ -83,6 +94,7 @@ export default function Admin() {
     setOrders(o.orders);
     setWithdrawals(w.withdrawals);
     setSettings(st.settings || {});
+    setZaloWelcome(st.settings?.zalo_welcome || '');
     setClicks(c.clicks || []);
     setUsers(u.users || []);
     try {
@@ -98,6 +110,16 @@ export default function Admin() {
       ]);
       setTgUsers(tu.users || []);
       setTgStatus(ts);
+    } catch {
+      /* ignore */
+    }
+    try {
+      const [zs, zu] = await Promise.all([
+        zaloApi.personalStatus(),
+        zaloApi.linkedUsers().catch(() => ({ users: [] })),
+      ]);
+      setZaloStatus(zs);
+      setZaloUsers(zu.users || []);
     } catch {
       /* ignore */
     }
@@ -1061,6 +1083,226 @@ export default function Admin() {
         </div>
       )}
 
+      {tab === 'zalo' && (
+        <div className="space-y-4 max-w-2xl">
+          <div className="card space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-extrabold">Zalo Bot (personal)</h2>
+                <p className="text-sm text-slate-500 mt-1">
+                  Acc cá nhân qua zca-js · unofficial · nên dùng acc phụ
+                </p>
+              </div>
+              <div
+                className={`rounded-full px-3 py-1 text-xs font-bold ${
+                  zaloStatus?.online
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+                    : 'bg-slate-100 text-slate-600 dark:bg-slate-800'
+                }`}
+              >
+                {zaloStatus?.online ? '● ONLINE' : '○ OFFLINE'}
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <dt className="text-xs text-slate-500">Bật (setting)</dt>
+                <dd className="font-semibold">
+                  {zaloStatus?.enabled ? 'BẬT' : 'TẮT'}
+                </dd>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <dt className="text-xs text-slate-500">Group listen</dt>
+                <dd className="font-semibold">
+                  {zaloStatus?.allowGroup ? 'BẬT' : 'TẮT'}
+                </dd>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <dt className="text-xs text-slate-500">UID bot</dt>
+                <dd className="font-mono text-xs break-all">
+                  {zaloStatus?.ownUid || '—'}
+                </dd>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3">
+                <dt className="text-xs text-slate-500">Session</dt>
+                <dd className="font-semibold">
+                  {zaloStatus?.hasCredentials ? 'Có credentials' : 'Thiếu session'}
+                </dd>
+              </div>
+              <div className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3 col-span-2">
+                <dt className="text-xs text-slate-500">Thống kê</dt>
+                <dd className="text-xs font-mono mt-1">
+                  msg={zaloStatus?.stats?.msgCount ?? 0} · sendOk=
+                  {zaloStatus?.stats?.sendOk ?? 0} · fail=
+                  {zaloStatus?.stats?.sendFail ?? 0}
+                  {zaloStatus?.stats?.lastError
+                    ? ` · err=${zaloStatus.stats.lastError}`
+                    : ''}
+                </dd>
+              </div>
+            </dl>
+
+            {zaloStatus?.killSwitch && (
+              <div className="rounded-xl bg-amber-50 text-amber-900 text-sm px-3 py-2 dark:bg-amber-950 dark:text-amber-100">
+                Kill switch env <code>ZCA_ENABLED=0</code> đang bật — Admin
+                không thể start bot. Sửa trên Render trước.
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="btn-primary !py-2 text-sm"
+                onClick={() =>
+                  act(
+                    () =>
+                      zaloApi.personalToggle({
+                        enabled: true,
+                        allowGroup:
+                          settings.zalo_personal_allow_group === '1' ||
+                          zaloStatus?.allowGroup,
+                        welcome: zaloWelcome,
+                      }),
+                    'Đã BẬT Zalo bot'
+                  )
+                }
+              >
+                Bật bot
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !py-2 text-sm !border-rose-300 !text-rose-700"
+                onClick={() =>
+                  act(
+                    () =>
+                      zaloApi.personalToggle({
+                        enabled: false,
+                        allowGroup: zaloStatus?.allowGroup,
+                      }),
+                    'Đã TẮT Zalo bot'
+                  )
+                }
+              >
+                Tắt bot
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !py-2 text-sm"
+                onClick={() =>
+                  act(() => zaloApi.personalRestart(), 'Đã restart listener')
+                }
+              >
+                Restart listener
+              </button>
+            </div>
+
+            <label className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-3 cursor-pointer">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={
+                  settings.zalo_personal_allow_group === '1' ||
+                  Boolean(zaloStatus?.allowGroup)
+                }
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setSettings({
+                    ...settings,
+                    zalo_personal_allow_group: on ? '1' : '0',
+                  });
+                  act(
+                    () =>
+                      zaloApi.personalToggle({
+                        enabled:
+                          settings.zalo_personal_enabled === '1' ||
+                          zaloStatus?.enabled,
+                        allowGroup: on,
+                        welcome: zaloWelcome,
+                      }),
+                    on ? 'Bật lắng nghe group' : 'Tắt lắng nghe group'
+                  );
+                }}
+              />
+              <span className="text-sm">
+                <b>Lắng nghe group</b>
+                <span className="block text-xs text-slate-500">
+                  Chỉ reply khi có lệnh (menu, sodu…) hoặc link Shopee
+                </span>
+              </span>
+            </label>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Tin chào (menu / start)
+              </label>
+              <textarea
+                className="input min-h-[80px] text-sm"
+                value={zaloWelcome}
+                onChange={(e) => setZaloWelcome(e.target.value)}
+                placeholder="Chào bạn! HoanTienVN — dán link Shopee…"
+              />
+              <button
+                type="button"
+                className="btn-secondary !py-2 text-sm mt-2"
+                onClick={() =>
+                  act(
+                    () =>
+                      adminApi.updateSettings({
+                        ...settings,
+                        zalo_welcome: zaloWelcome,
+                        zalo_personal_enabled:
+                          settings.zalo_personal_enabled ||
+                          (zaloStatus?.enabled ? '1' : '0'),
+                        zalo_personal_allow_group:
+                          settings.zalo_personal_allow_group ||
+                          (zaloStatus?.allowGroup ? '1' : '0'),
+                      }),
+                    'Đã lưu tin chào'
+                  )
+                }
+              >
+                Lưu tin chào
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-500">
+              Session đăng nhập (cookie) cấu hình bằng env Render{' '}
+              <code>ZCA_SESSION_B64</code> — không lưu trên web. Local:{' '}
+              <code>npm run zca:login</code>
+            </p>
+          </div>
+
+          <div className="card !p-0 overflow-hidden">
+            <div className="px-4 py-3 font-bold border-b border-slate-100 dark:border-slate-800">
+              User đã gắn Zalo ({zaloUsers.length})
+            </div>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800 max-h-80 overflow-y-auto">
+              {zaloUsers.map((u) => (
+                <li
+                  key={u.id}
+                  className="px-4 py-2 text-sm flex justify-between gap-2"
+                >
+                  <div>
+                    <div className="font-medium">{u.name}</div>
+                    <div className="text-xs text-slate-400">
+                      {u.email} · sub {u.affSubId}
+                    </div>
+                  </div>
+                  <div className="text-xs font-mono text-slate-500">
+                    {u.zaloId}
+                  </div>
+                </li>
+              ))}
+              {!zaloUsers.length && (
+                <li className="p-6 text-center text-slate-400 text-sm">
+                  Chưa có user liên kết Zalo
+                </li>
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
+
       {tab === 'settings' && (
         <form
           className="card space-y-3 max-w-xl"
@@ -1085,6 +1327,9 @@ export default function Admin() {
             ['telegram_bot_enabled', 'Telegram bot bật (0/1)'],
             ['telegram_mode', 'Telegram mode: polling | webhook'],
             ['telegram_welcome', 'Telegram tin chào'],
+            ['zalo_personal_enabled', 'Zalo personal bot bật (0/1)'],
+            ['zalo_personal_allow_group', 'Zalo lắng nghe group (0/1)'],
+            ['zalo_welcome', 'Zalo tin chào'],
             ['admin_bank_bin', 'STK admin — BIN NH (fallback VietQR)'],
             ['admin_bank_account', 'STK admin — số tài khoản (fallback)'],
             ['admin_bank_holder', 'STK admin — chủ TK'],

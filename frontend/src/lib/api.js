@@ -165,6 +165,11 @@ export const zaloApi = {
   bindStatus: () => api('/zalo/bind-status'),
   test: (payload) => api('/zalo/test', { method: 'POST', body: payload }),
   linkedUsers: () => api('/zalo/linked-users'),
+  personalStatus: () => api('/admin/zalo-personal/status'),
+  personalToggle: (payload) =>
+    api('/admin/zalo-personal/toggle', { method: 'POST', body: payload }),
+  personalRestart: () =>
+    api('/admin/zalo-personal/restart', { method: 'POST' }),
 };
 
 export const telegramApi = {
