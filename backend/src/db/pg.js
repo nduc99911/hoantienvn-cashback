@@ -2,7 +2,11 @@
  * PostgreSQL (Supabase) pool + helpers
  * Connection: DATABASE_URL=postgresql://postgres.[ref]:[pass]@aws-0-....supabase.co:5432/postgres
  */
+import dns from 'node:dns';
 import pg from 'pg';
+
+// Railway/VPS thường không route IPv6 → ưu tiên A record (IPv4)
+dns.setDefaultResultOrder('ipv4first');
 
 const { Pool } = pg;
 
@@ -16,6 +20,10 @@ export function getPool() {
       connectionString: url,
       ssl: url.includes('localhost') ? false : { rejectUnauthorized: false },
       max: 10,
+      // Ép IPv4 khi host có cả AAAA (tránh ENETUNREACH trên Railway)
+      lookup: (hostname, options, callback) => {
+        dns.lookup(hostname, { ...options, family: 4 }, callback);
+      },
     });
   }
   return pool;

@@ -12,17 +12,25 @@
 
 Dạng:
 
+**Khuyến nghị (IPv4 — bắt buộc trên Railway/Render free):** Session pooler port `5432`:
+
+```
+postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+```
+
+Transaction pooler (6543) cho serverless:
+
 ```
 postgresql://postgres.[PROJECT-REF]:[YOUR-PASSWORD]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres
 ```
 
-Hoặc **Session mode** port `5432`:
+Direct (IPv6 only trên free tier — **không dùng** trên Railway):
 
 ```
 postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 ```
 
-> Nên dùng **Transaction pooler (6543)** trên serverless; Render/Railway dùng **5432** hoặc pooler đều được.
+> Username pooler là `postgres.[PROJECT-REF]`, không phải `postgres`.
 
 ## 3. Tạo bảng
 

@@ -149,7 +149,7 @@ setTimeout(() => {
   releaseHeldOrders().catch(() => {});
 }, 3000);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   const setup = describeAffiliateSetup();
   console.log(`\n🚀 HoanTienVN API: http://localhost:${PORT}`);
   console.log(
