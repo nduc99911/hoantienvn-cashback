@@ -1,24 +1,21 @@
-import { db } from '../db/schema.js';
+import { one, run, sqlNow, sqlNowMinusSeconds, isPostgres } from '../db/schema.js';
 
-/**
- * Simple SQLite rate limit: max hits per windowSeconds for a key.
- */
 export function rateLimit({ keyFn, max = 30, windowSeconds = 60, message }) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     try {
       const key = keyFn(req);
-      const row = db
-        .prepare(
-          `SELECT * FROM rate_limits WHERE key = ?
-           AND window_start >= datetime('now', ?)
-           ORDER BY id DESC LIMIT 1`
-        )
-        .get(key, `-${windowSeconds} seconds`);
+      const row = await one(
+        `SELECT * FROM rate_limits WHERE key = ?
+         AND window_start >= ${sqlNowMinusSeconds(windowSeconds)}
+         ORDER BY id DESC LIMIT 1`,
+        [key]
+      );
 
       if (!row) {
-        db.prepare(
-          `INSERT INTO rate_limits (key, hits, window_start) VALUES (?, 1, datetime('now'))`
-        ).run(key);
+        await run(
+          `INSERT INTO rate_limits (key, hits, window_start) VALUES (?, 1, ${sqlNow()})`,
+          [key]
+        );
         return next();
       }
 
@@ -28,7 +25,7 @@ export function rateLimit({ keyFn, max = 30, windowSeconds = 60, message }) {
         });
       }
 
-      db.prepare('UPDATE rate_limits SET hits = hits + 1 WHERE id = ?').run(row.id);
+      await run('UPDATE rate_limits SET hits = hits + 1 WHERE id = ?', [row.id]);
       next();
     } catch (e) {
       console.error('rateLimit', e);

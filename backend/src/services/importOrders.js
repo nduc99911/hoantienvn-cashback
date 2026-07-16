@@ -6,7 +6,7 @@
  * Gộp nhiều dòng item cùng ID đơn hàng
  */
 import fs from 'fs';
-import { db, getSetting } from '../db/schema.js';
+import { getSetting, one, many, run } from '../db/schema.js';
 import { recordPendingOrder, approveOrderToHold } from './wallet.js';
 import { estimateCommissionRate } from './product.js';
 import { parseSubId, reconcileKey } from './affiliate.js';
@@ -285,11 +285,11 @@ function parseSimpleCsv(lines, headers) {
  * Map sub_id → user
  * Hỗ trợ: U2_DEMO2026 | DEMO2026 | dangbeo (link.sub_id exact)
  */
-export function resolveUserFromSubId(row) {
+export async function resolveUserFromSubId(row) {
   if (row.email) {
-    const u = db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .get(String(row.email).toLowerCase());
+    const u = await one('SELECT * FROM users WHERE email = ?', [
+      String(row.email).toLowerCase(),
+    ]);
     if (u) return { user: u, via: 'email' };
   }
 
@@ -298,39 +298,35 @@ export function resolveUserFromSubId(row) {
     const parsed = parseSubId(sub);
 
     if (parsed.userId) {
-      const u = db.prepare('SELECT * FROM users WHERE id = ?').get(parsed.userId);
+      const u = await one('SELECT * FROM users WHERE id = ?', [parsed.userId]);
       if (u) return { user: u, via: 'sub_uid', subId: sub };
     }
 
     if (parsed.referralCode) {
-      const u = db
-        .prepare('SELECT * FROM users WHERE referral_code = ?')
-        .get(parsed.referralCode);
+      const u = await one('SELECT * FROM users WHERE referral_code = ?', [
+        parsed.referralCode,
+      ]);
       if (u) return { user: u, via: 'sub_referral', subId: sub };
     }
 
-    // exact match any link sub_id
-    const link = db
-      .prepare(
-        `SELECT * FROM cashback_links WHERE sub_id = ? ORDER BY id DESC LIMIT 1`
-      )
-      .get(sub);
+    const link = await one(
+      `SELECT * FROM cashback_links WHERE sub_id = ? ORDER BY id DESC LIMIT 1`,
+      [sub]
+    );
     if (link) {
-      const u = db.prepare('SELECT * FROM users WHERE id = ?').get(link.user_id);
+      const u = await one('SELECT * FROM users WHERE id = ?', [link.user_id]);
       if (u) return { user: u, via: 'link_sub', subId: sub, linkId: link.id };
     }
 
-    // case-insensitive referral
-    const ref = db
-      .prepare(
-        `SELECT * FROM users WHERE upper(referral_code) = upper(?) LIMIT 1`
-      )
-      .get(sub);
+    const ref = await one(
+      `SELECT * FROM users WHERE upper(referral_code) = upper(?) LIMIT 1`,
+      [sub]
+    );
     if (ref) return { user: ref, via: 'referral_ci', subId: sub };
 
     const m = sub.match(/U(\d+)/i);
     if (m) {
-      const u = db.prepare('SELECT * FROM users WHERE id = ?').get(Number(m[1]));
+      const u = await one('SELECT * FROM users WHERE id = ?', [Number(m[1])]);
       if (u) return { user: u, via: 'sub_partial', subId: sub };
     }
   }
@@ -342,7 +338,7 @@ export function resolveUserFromSubId(row) {
  * @param {Array|string} input - rows array hoặc CSV text
  * @param {{ autoHold?: boolean, onlyCompleted?: boolean, minCommission?: number }} options
  */
-export function importAffiliateRows(input, options = {}) {
+export async function importAffiliateRows(input, options = {}) {
   const autoHold = options.autoHold !== false;
   const onlyCompleted = options.onlyCompleted !== false;
   const minCommission = options.minCommission ?? 0;
@@ -392,8 +388,7 @@ export function importAffiliateRows(input, options = {}) {
         }
       }
 
-      const exists = db
-        .prepare('SELECT id, status FROM orders WHERE order_id = ?')
+      const exists = /*FIXME db.prepare*/await run('SELECT id, status FROM orders WHERE order_id = ?')
         .get(String(row.orderId));
       if (exists) {
         results.push({
@@ -406,7 +401,7 @@ export function importAffiliateRows(input, options = {}) {
         continue;
       }
 
-      const resolved = resolveUserFromSubId(row);
+      const resolved = await resolveUserFromSubId(row);
       if (!resolved.user) {
         results.push({
           orderId: row.orderId,
@@ -423,7 +418,9 @@ export function importAffiliateRows(input, options = {}) {
       const user = resolved.user;
       let commission = Number(row.commission) || 0;
       if (!commission && row.amount > 0) {
-        const rate = estimateCommissionRate(row.productName || '', 'shopee').rate;
+        const rate = (
+          await estimateCommissionRate(row.productName || '', 'shopee')
+        ).rate;
         commission = Math.round(row.amount * rate);
       }
       if (commission < minCommission && commission > 0) {
@@ -444,15 +441,14 @@ export function importAffiliateRows(input, options = {}) {
 
       let linkId = resolved.linkId || null;
       if (!linkId && row.subId) {
-        const link = db
-          .prepare(
+        const link = /*FIXME db.prepare*/await run(
             `SELECT id FROM cashback_links WHERE sub_id = ? AND user_id = ? LIMIT 1`
           )
           .get(row.subId, user.id);
         if (link) linkId = link.id;
       }
 
-      const order = recordPendingOrder({
+      const order = await recordPendingOrder({
         userId: user.id,
         linkId,
         orderId: row.orderId,
@@ -470,13 +466,13 @@ export function importAffiliateRows(input, options = {}) {
       });
 
       if (autoHold) {
-        approveOrderToHold(
+        await approveOrderToHold(
           order.id,
           `Import Shopee · ${reconcileKey(row.subId, row.orderId)}`
         );
       }
 
-      createNotification({
+      await createNotification({
         userId: user.id,
         type: 'order_auto',
         title: 'Đơn Shopee ghi nhận tự động',
@@ -519,17 +515,18 @@ export function importAffiliateRows(input, options = {}) {
 }
 
 /** Đọc file từ disk */
-export function importFromFile(filePath, options = {}) {
+export async function importFromFile(filePath, options = {}) {
   const text = fs.readFileSync(filePath, 'utf8');
   return importAffiliateRows(text, options);
 }
 
 /** Preview không ghi DB */
-export function previewExportText(text) {
+export async function previewExportText(text) {
   const parsed = parseExportText(text);
-  const sample = (parsed.rows || []).slice(0, 20).map((r) => {
-    const resolved = resolveUserFromSubId(r);
-    return {
+  const sample = [];
+  for (const r of (parsed.rows || []).slice(0, 20)) {
+    const resolved = await resolveUserFromSubId(r);
+    sample.push({
       orderId: r.orderId,
       amount: r.amount,
       commission: r.commission,
@@ -540,8 +537,8 @@ export function previewExportText(text) {
       mappedUser: resolved.user
         ? { id: resolved.user.id, name: resolved.user.name, via: resolved.via }
         : null,
-    };
-  });
+    });
+  }
   return {
     meta: parsed.meta,
     totalOrders: parsed.rows?.length || 0,

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/schema.js';
+import { one, many, run } from '../db/schema.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { analyzeProduct } from '../services/product.js';
 import {
@@ -109,19 +109,17 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
 
     let shortCode = generateShortCode();
     while (
-      db.prepare('SELECT id FROM cashback_links WHERE short_code = ?').get(shortCode)
+      await one('SELECT id FROM cashback_links WHERE short_code = ?', [shortCode])
     ) {
       shortCode = generateShortCode();
     }
 
-    const info = db
-      .prepare(
-        `INSERT INTO cashback_links
-         (user_id, platform, original_url, affiliate_url, short_code, product_name, product_image,
-          product_price, commission_rate, cashback_rate, estimated_cashback, sub_id, shop_id, item_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      )
-      .run(
+    const info = await run(
+      `INSERT INTO cashback_links
+       (user_id, platform, original_url, affiliate_url, short_code, product_name, product_image,
+        product_price, commission_rate, cashback_rate, estimated_cashback, sub_id, shop_id, item_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         req.user.id,
         result.platform || 'shopee',
         originLink || result.productLink,
@@ -135,8 +133,9 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
         result.estimatedCashback,
         subId,
         result.shopId,
-        result.itemId
-      );
+        result.itemId,
+      ]
+    );
 
     const base =
       process.env.PUBLIC_URL || `${req.protocol}://${req.get('host')}`;
@@ -171,9 +170,8 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
   }
 });
 
-router.get('/mine', requireAuth, (req, res) => {
-  const links = db
-    .prepare(
+router.get('/mine', requireAuth, async (req, res) => {
+  const links = /*FIXME db.prepare*/await run(
       `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
     )
     .all(req.user.id);

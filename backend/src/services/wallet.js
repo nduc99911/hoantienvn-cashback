@@ -1,17 +1,16 @@
-import { db, getSetting } from '../db/schema.js';
+import {
+  one,
+  run,
+  withTransaction,
+  getSetting,
+  sqlNow,
+  sqlNowPlusDays,
+} from '../db/schema.js';
 import { createNotification } from './notifications.js';
 import { notifyHoldReleased } from './telegram.js';
 
-function addDaysSql(days) {
-  return `datetime('now', '+${parseInt(days, 10) || 7} days')`;
-}
-
-/**
- * Duyệt đơn → đưa vào HOLD (chưa vào balance khả dụng)
- * status: held
- */
-export function approveOrderToHold(orderId, adminNote) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+export async function approveOrderToHold(orderId, adminNote) {
+  const order = await one('SELECT * FROM orders WHERE id = ?', [orderId]);
   if (!order) throw new Error('Không tìm thấy đơn');
   if (['paid', 'held', 'rejected', 'cancelled'].includes(order.status)) {
     throw new Error(`Không duyệt được đơn ở trạng thái ${order.status}`);
@@ -20,195 +19,178 @@ export function approveOrderToHold(orderId, adminNote) {
   const holdDays = parseInt(getSetting('hold_days', '7'), 10) || 7;
   const cashback = order.cashback_amount;
 
-  const run = db.transaction(() => {
-    // Nếu đã cộng pending (pending/completed) → chuyển pending → held
+  await withTransaction(async (tx) => {
     if (order.status === 'pending' || order.status === 'completed') {
-      db.prepare(
+      await tx.run(
         `UPDATE users SET
-          pending_balance = MAX(0, pending_balance - ?),
+          pending_balance = CASE WHEN pending_balance - ? < 0 THEN 0 ELSE pending_balance - ? END,
           held_balance = held_balance + ?
-         WHERE id = ?`
-      ).run(cashback, cashback, order.user_id);
+         WHERE id = ?`,
+        [cashback, cashback, cashback, order.user_id]
+      );
     } else {
-      // pending_review: chưa cộng pending
-      db.prepare(
-        `UPDATE users SET held_balance = held_balance + ? WHERE id = ?`
-      ).run(cashback, order.user_id);
+      await tx.run(
+        `UPDATE users SET held_balance = held_balance + ? WHERE id = ?`,
+        [cashback, order.user_id]
+      );
     }
 
-    db.prepare(
+    await tx.run(
       `UPDATE orders SET
         status = 'held',
-        hold_until = ${addDaysSql(holdDays)},
+        hold_until = ${sqlNowPlusDays(holdDays)},
         admin_note = ?,
-        complete_time = datetime('now'),
-        updated_at = datetime('now')
-       WHERE id = ?`
-    ).run(adminNote || `Hold ${holdDays} ngày`, orderId);
-
-    db.prepare(
-      `INSERT INTO wallet_transactions
-       (user_id, type, amount, status, reference_type, reference_id, description)
-       VALUES (?, 'cashback_hold', ?, 'pending', 'order', ?, ?)`
-    ).run(
-      order.user_id,
-      cashback,
-      orderId,
-      `Hold ${holdDays} ngày — đơn #${order.order_id || orderId}`
+        complete_time = ${sqlNow()},
+        updated_at = ${sqlNow()}
+       WHERE id = ?`,
+      [adminNote || `Hold ${holdDays} ngày`, orderId]
     );
 
-    createNotification({
-      userId: order.user_id,
-      type: 'order_held',
-      title: 'Đơn đã được duyệt (đang hold)',
-      body: `Đơn #${order.order_id || orderId} được duyệt. Tiền hoàn ${cashback.toLocaleString('vi-VN')}đ sẽ vào ví sau ${holdDays} ngày.`,
-      meta: { orderId },
-    });
+    await tx.run(
+      `INSERT INTO wallet_transactions
+       (user_id, type, amount, status, reference_type, reference_id, description)
+       VALUES (?, 'cashback_hold', ?, 'pending', 'order', ?, ?)`,
+      [
+        order.user_id,
+        cashback,
+        orderId,
+        `Hold ${holdDays} ngày — đơn #${order.order_id || orderId}`,
+      ]
+    );
   });
 
-  run();
-  return db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  await createNotification({
+    userId: order.user_id,
+    type: 'order_held',
+    title: 'Đơn đã được duyệt (đang hold)',
+    body: `Đơn #${order.order_id || orderId} được duyệt. Tiền hoàn ${Number(cashback).toLocaleString('vi-VN')}đ sẽ vào ví sau ${holdDays} ngày.`,
+    meta: { orderId },
+  });
+
+  return one('SELECT * FROM orders WHERE id = ?', [orderId]);
 }
 
-/**
- * Nhả hold hết hạn → balance + F1/F2
- */
-export function releaseHeldOrders() {
-  const due = db
-    .prepare(
-      `SELECT * FROM orders
-       WHERE status = 'held'
-         AND hold_until IS NOT NULL
-         AND hold_until <= datetime('now')`
-    )
-    .all();
-
+export async function releaseHeldOrders() {
+  const due = await manyDue();
   let total = 0;
   for (const order of due) {
     try {
-      releaseOneOrder(order.id);
-      total += order.cashback_amount;
+      await releaseOneOrder(order.id);
+      total += Number(order.cashback_amount) || 0;
     } catch (e) {
       console.error('release order', order.id, e.message);
     }
   }
-
   if (due.length > 0) {
     notifyHoldReleased(due.length, total).catch(() => {});
   }
   return { released: due.length, totalAmount: total };
 }
 
-export function releaseOneOrder(orderId, { force = false } = {}) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+async function manyDue() {
+  const { many } = await import('../db/schema.js');
+  return many(
+    `SELECT * FROM orders
+     WHERE status = 'held'
+       AND hold_until IS NOT NULL
+       AND hold_until <= ${sqlNow()}`
+  );
+}
+
+export async function releaseOneOrder(orderId, { force = false } = {}) {
+  const order = await one('SELECT * FROM orders WHERE id = ?', [orderId]);
   if (!order || order.status !== 'held') {
     if (order?.status === 'paid') return order;
     throw new Error('Đơn không ở trạng thái held');
   }
   if (!force && order.hold_until) {
-    const stillHeld = db
-      .prepare(
-        `SELECT id FROM orders WHERE id = ? AND hold_until > datetime('now')`
-      )
-      .get(orderId);
+    const stillHeld = await one(
+      `SELECT id FROM orders WHERE id = ? AND hold_until > ${sqlNow()}`,
+      [orderId]
+    );
     if (stillHeld) throw new Error('Chưa hết thời gian hold');
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(order.user_id);
+  const user = await one('SELECT * FROM users WHERE id = ?', [order.user_id]);
   if (!user) throw new Error('User không tồn tại');
 
   const f1Rate = parseFloat(getSetting('f1_rate', '0.05'));
   const f2Rate = parseFloat(getSetting('f2_rate', '0.02'));
   const cashback = order.cashback_amount;
 
-  const run = db.transaction(() => {
-    db.prepare(
+  await withTransaction(async (tx) => {
+    await tx.run(
       `UPDATE users SET
-        held_balance = MAX(0, held_balance - ?),
+        held_balance = CASE WHEN held_balance - ? < 0 THEN 0 ELSE held_balance - ? END,
         balance = balance + ?
-       WHERE id = ?`
-    ).run(cashback, cashback, user.id);
-
-    const newBalance = db
-      .prepare('SELECT balance FROM users WHERE id = ?')
-      .get(user.id).balance;
-
-    db.prepare(
-      `INSERT INTO wallet_transactions
-       (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-       VALUES (?, 'cashback', ?, ?, 'completed', 'order', ?, ?)`
-    ).run(
-      user.id,
-      cashback,
-      newBalance,
-      order.id,
-      `Hoàn tiền khả dụng đơn #${order.order_id || order.id}`
+       WHERE id = ?`,
+      [cashback, cashback, cashback, user.id]
     );
 
-    db.prepare(
-      `UPDATE orders SET status = 'paid', updated_at = datetime('now') WHERE id = ?`
-    ).run(order.id);
+    const balRow = await tx.one('SELECT balance FROM users WHERE id = ?', [
+      user.id,
+    ]);
+    const newBalance = balRow.balance;
 
-    createNotification({
-      userId: user.id,
-      type: 'order_paid',
-      title: 'Tiền hoàn đã vào ví',
-      body: `+${cashback.toLocaleString('vi-VN')}đ từ đơn #${order.order_id || order.id}`,
-      meta: { orderId: order.id },
-    });
+    await tx.run(
+      `INSERT INTO wallet_transactions
+       (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
+       VALUES (?, 'cashback', ?, ?, 'completed', 'order', ?, ?)`,
+      [
+        user.id,
+        cashback,
+        newBalance,
+        order.id,
+        `Hoàn tiền khả dụng đơn #${order.order_id || order.id}`,
+      ]
+    );
 
-    // F1 / F2
+    await tx.run(
+      `UPDATE orders SET status = 'paid', updated_at = ${sqlNow()} WHERE id = ?`,
+      [order.id]
+    );
+
     if (user.referred_by) {
       const f1Amount = Math.round(cashback * f1Rate);
       if (f1Amount > 0) {
-        db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(
+        await tx.run('UPDATE users SET balance = balance + ? WHERE id = ?', [
           f1Amount,
-          user.referred_by
-        );
-        const f1Bal = db
-          .prepare('SELECT balance FROM users WHERE id = ?')
-          .get(user.referred_by).balance;
-        db.prepare(
+          user.referred_by,
+        ]);
+        const f1Bal = await tx.one('SELECT balance FROM users WHERE id = ?', [
+          user.referred_by,
+        ]);
+        await tx.run(
           `INSERT INTO wallet_transactions
            (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-           VALUES (?, 'referral_f1', ?, ?, 'completed', 'order', ?, ?)`
-        ).run(
-          user.referred_by,
-          f1Amount,
-          f1Bal,
-          order.id,
-          `Hoa hồng F1 từ ${user.name}`
+           VALUES (?, 'referral_f1', ?, ?, 'completed', 'order', ?, ?)`,
+          [user.referred_by, f1Amount, f1Bal.balance, order.id, `Hoa hồng F1 từ ${user.name}`]
         );
-        createNotification({
-          userId: user.referred_by,
-          type: 'referral',
-          title: 'Hoa hồng F1',
-          body: `+${f1Amount.toLocaleString('vi-VN')}đ từ ${user.name}`,
-        });
 
-        const f1User = db
-          .prepare('SELECT * FROM users WHERE id = ?')
-          .get(user.referred_by);
+        const f1User = await tx.one('SELECT * FROM users WHERE id = ?', [
+          user.referred_by,
+        ]);
         if (f1User?.referred_by) {
           const f2Amount = Math.round(cashback * f2Rate);
           if (f2Amount > 0) {
-            db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(
+            await tx.run('UPDATE users SET balance = balance + ? WHERE id = ?', [
               f2Amount,
-              f1User.referred_by
-            );
-            const f2Bal = db
-              .prepare('SELECT balance FROM users WHERE id = ?')
-              .get(f1User.referred_by).balance;
-            db.prepare(
+              f1User.referred_by,
+            ]);
+            const f2Bal = await tx.one('SELECT balance FROM users WHERE id = ?', [
+              f1User.referred_by,
+            ]);
+            await tx.run(
               `INSERT INTO wallet_transactions
                (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-               VALUES (?, 'referral_f2', ?, ?, 'completed', 'order', ?, ?)`
-            ).run(
-              f1User.referred_by,
-              f2Amount,
-              f2Bal,
-              order.id,
-              `Hoa hồng F2 từ tuyến dưới của ${user.name}`
+               VALUES (?, 'referral_f2', ?, ?, 'completed', 'order', ?, ?)`,
+              [
+                f1User.referred_by,
+                f2Amount,
+                f2Bal.balance,
+                order.id,
+                `Hoa hồng F2 từ tuyến dưới của ${user.name}`,
+              ]
             );
           }
         }
@@ -216,23 +198,28 @@ export function releaseOneOrder(orderId, { force = false } = {}) {
     }
   });
 
-  run();
-  return db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+  await createNotification({
+    userId: user.id,
+    type: 'order_paid',
+    title: 'Tiền hoàn đã vào ví',
+    body: `+${Number(cashback).toLocaleString('vi-VN')}đ từ đơn #${order.order_id || order.id}`,
+    meta: { orderId: order.id },
+  });
+
+  return one('SELECT * FROM orders WHERE id = ?', [orderId]);
 }
 
-/** Legacy: credit ngay (demo) */
-export function creditOrderCashback(orderId) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+export async function creditOrderCashback(orderId) {
+  const order = await one('SELECT * FROM orders WHERE id = ?', [orderId]);
   if (!order || order.status === 'paid') return null;
   if (order.status === 'held') {
     return releaseOneOrder(orderId, { force: true });
   }
-  // put on hold with 0 days then release — or approve then force release
-  approveOrderToHold(orderId, 'Demo credit');
+  await approveOrderToHold(orderId, 'Demo credit');
   return releaseOneOrder(orderId, { force: true });
 }
 
-export function recordPendingOrder({
+export async function recordPendingOrder({
   userId,
   linkId,
   orderId,
@@ -251,21 +238,19 @@ export function recordPendingOrder({
   fraudFlags = null,
 }) {
   if (orderId) {
-    const existing = db
-      .prepare('SELECT id FROM orders WHERE order_id = ?')
-      .get(String(orderId));
+    const existing = await one('SELECT id FROM orders WHERE order_id = ?', [
+      String(orderId),
+    ]);
     if (existing) throw new Error('Mã đơn hàng này đã được khai báo');
   }
 
-  const info = db
-    .prepare(
-      `INSERT INTO orders
-       (user_id, link_id, platform, order_id, conversion_id, product_name, product_image,
-        order_amount, total_commission, cashback_amount, status, source, claim_note,
-        fraud_score, fraud_flags, purchase_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  const info = await run(
+    `INSERT INTO orders
+     (user_id, link_id, platform, order_id, conversion_id, product_name, product_image,
+      order_amount, total_commission, cashback_amount, status, source, claim_note,
+      fraud_score, fraud_flags, purchase_time)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
       userId,
       linkId || null,
       platform,
@@ -281,63 +266,67 @@ export function recordPendingOrder({
       claimNote,
       fraudScore,
       fraudFlags ? JSON.stringify(fraudFlags) : null,
-      purchaseTime || new Date().toISOString()
-    );
+      purchaseTime || new Date().toISOString(),
+    ]
+  );
 
   if (status === 'pending' || status === 'completed') {
-    db.prepare(
-      'UPDATE users SET pending_balance = pending_balance + ? WHERE id = ?'
-    ).run(cashbackAmount, userId);
-
-    db.prepare(
+    await run(
+      'UPDATE users SET pending_balance = pending_balance + ? WHERE id = ?',
+      [cashbackAmount, userId]
+    );
+    await run(
       `INSERT INTO wallet_transactions
        (user_id, type, amount, status, reference_type, reference_id, description)
-       VALUES (?, 'cashback', ?, 'pending', 'order', ?, ?)`
-    ).run(
-      userId,
-      cashbackAmount,
-      info.lastInsertRowid,
-      `Đơn tạm tính: ${productName || orderId}`
+       VALUES (?, 'cashback', ?, 'pending', 'order', ?, ?)`,
+      [
+        userId,
+        cashbackAmount,
+        info.lastInsertRowid,
+        `Đơn tạm tính: ${productName || orderId}`,
+      ]
     );
   }
 
   return { id: info.lastInsertRowid };
 }
 
-export function rejectOrder(orderId, adminNote) {
-  const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
+export async function rejectOrder(orderId, adminNote) {
+  const order = await one('SELECT * FROM orders WHERE id = ?', [orderId]);
   if (!order) throw new Error('Không tìm thấy đơn');
   if (order.status === 'paid') throw new Error('Đơn đã thanh toán');
 
-  const run = db.transaction(() => {
+  await withTransaction(async (tx) => {
     if (order.status === 'pending' || order.status === 'completed') {
-      db.prepare(
-        'UPDATE users SET pending_balance = MAX(0, pending_balance - ?) WHERE id = ?'
-      ).run(order.cashback_amount, order.user_id);
+      await tx.run(
+        `UPDATE users SET pending_balance = CASE WHEN pending_balance - ? < 0 THEN 0 ELSE pending_balance - ? END WHERE id = ?`,
+        [order.cashback_amount, order.cashback_amount, order.user_id]
+      );
     }
     if (order.status === 'held') {
-      db.prepare(
-        'UPDATE users SET held_balance = MAX(0, held_balance - ?) WHERE id = ?'
-      ).run(order.cashback_amount, order.user_id);
+      await tx.run(
+        `UPDATE users SET held_balance = CASE WHEN held_balance - ? < 0 THEN 0 ELSE held_balance - ? END WHERE id = ?`,
+        [order.cashback_amount, order.cashback_amount, order.user_id]
+      );
     }
-    db.prepare(
-      `UPDATE orders SET status = 'rejected', admin_note = ?, updated_at = datetime('now') WHERE id = ?`
-    ).run(adminNote || null, orderId);
-
-    createNotification({
-      userId: order.user_id,
-      type: 'order_rejected',
-      title: 'Đơn bị từ chối',
-      body: adminNote || 'Đơn không khớp đối soát Affiliate',
-      meta: { orderId },
-    });
+    await tx.run(
+      `UPDATE orders SET status = 'rejected', admin_note = ?, updated_at = ${sqlNow()} WHERE id = ?`,
+      [adminNote || null, orderId]
+    );
   });
-  run();
+
+  await createNotification({
+    userId: order.user_id,
+    type: 'order_rejected',
+    title: 'Đơn bị từ chối',
+    body: adminNote || 'Đơn không khớp đối soát Affiliate',
+    meta: { orderId },
+  });
 }
 
-export function requestWithdraw(userId, amount, method, paymentInfo) {
+export async function requestWithdraw(userId, amount, method, paymentInfo) {
   const minWithdraw = parseFloat(getSetting('min_withdraw', '50000'));
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+  const user = await one('SELECT * FROM users WHERE id = ?', [userId]);
   if (!user) throw new Error('User không tồn tại');
   if (user.status === 'banned') throw new Error('Tài khoản bị khóa');
   if (amount < minWithdraw) {
@@ -347,43 +336,42 @@ export function requestWithdraw(userId, amount, method, paymentInfo) {
   }
   if (user.balance < amount) throw new Error('Số dư không đủ');
 
-  const run = db.transaction(() => {
-    db.prepare('UPDATE users SET balance = balance - ? WHERE id = ?').run(
+  return withTransaction(async (tx) => {
+    await tx.run('UPDATE users SET balance = balance - ? WHERE id = ?', [
       amount,
-      userId
-    );
-    const bal = db.prepare('SELECT balance FROM users WHERE id = ?').get(userId)
-      .balance;
+      userId,
+    ]);
+    const bal = await tx.one('SELECT balance FROM users WHERE id = ?', [userId]);
 
-    const w = db
-      .prepare(
-        `INSERT INTO withdraw_requests
-         (user_id, amount, method, bank_name, bank_account, bank_holder, momo_phone, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`
-      )
-      .run(
+    const w = await tx.run(
+      `INSERT INTO withdraw_requests
+       (user_id, amount, method, bank_name, bank_account, bank_holder, momo_phone, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
         userId,
         amount,
         method,
         paymentInfo.bankName || null,
         paymentInfo.bankAccount || null,
         paymentInfo.bankHolder || null,
-        paymentInfo.momoPhone || null
-      );
-
-    db.prepare(
-      `INSERT INTO wallet_transactions
-       (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-       VALUES (?, 'withdraw', ?, ?, 'pending', 'withdraw', ?, ?)`
-    ).run(
-      userId,
-      -amount,
-      bal,
-      w.lastInsertRowid,
-      `Yêu cầu rút tiền ${method.toUpperCase()}`
+        paymentInfo.momoPhone || null,
+      ]
     );
 
-    createNotification({
+    await tx.run(
+      `INSERT INTO wallet_transactions
+       (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
+       VALUES (?, 'withdraw', ?, ?, 'pending', 'withdraw', ?, ?)`,
+      [
+        userId,
+        -amount,
+        bal.balance,
+        w.lastInsertRowid,
+        `Yêu cầu rút tiền ${method.toUpperCase()}`,
+      ]
+    );
+
+    await createNotification({
       roleTarget: 'admin',
       type: 'withdraw',
       title: 'Yêu cầu rút tiền',
@@ -393,6 +381,4 @@ export function requestWithdraw(userId, amount, method, paymentInfo) {
 
     return w.lastInsertRowid;
   });
-
-  return run();
 }

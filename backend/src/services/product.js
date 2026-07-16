@@ -6,7 +6,7 @@
  *  3. HTML meta og:* từ trang sản phẩm
  *  4. Parse slug URL (chỉ tên — không bịa giá)
  */
-import { db, getSetting } from '../db/schema.js';
+import { getSetting, many } from '../db/schema.js';
 
 const UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
@@ -211,19 +211,20 @@ function stripVi(s = '') {
     .replace(/đ/g, 'd');
 }
 
-export function estimateCommissionRate(productName = '', platform = 'shopee') {
+export async function estimateCommissionRate(
+  productName = '',
+  platform = 'shopee'
+) {
   const defaultRate = parseFloat(getSetting('default_commission_rate', '0.12'));
   const name = stripVi(productName);
-  const cards = db
-    .prepare(
-      `SELECT * FROM rate_cards WHERE platform = ? OR platform = 'all' ORDER BY sort_order ASC`
-    )
-    .all(platform);
+  const cards = await many(
+    `SELECT * FROM rate_cards WHERE platform = ? OR platform = 'all' ORDER BY sort_order ASC`,
+    [platform]
+  );
 
   for (const card of cards) {
     if (card.keyword === 'default') continue;
     const parts = card.keyword.split('|').map((s) => stripVi(s.trim()));
-    // Ưu tiên từ khóa dài hơn / cụ thể
     if (parts.some((p) => p && p.length >= 3 && name.includes(p))) {
       return { rate: card.commission_rate, label: card.label };
     }
@@ -576,7 +577,10 @@ async function analyzeGeneric(url, platform, label) {
 
   const productName =
     guessNameFromUrl(url) || `Sản phẩm ${label} ${parsed.itemId || ''}`.trim();
-  const { rate, label: cat } = estimateCommissionRate(productName, platform);
+  const { rate, label: cat } = await estimateCommissionRate(
+    productName,
+    platform
+  );
   const shareRatio = parseFloat(getSetting('cashback_share_ratio', '0.70'));
 
   return {
@@ -678,7 +682,7 @@ export async function analyzeShopeeProduct(rawUrl) {
     categoryLabel = 'Theo dữ liệu affiliate';
     estimatedCashback = Math.round(commissionAmount * shareRatio);
   } else {
-    const est = estimateCommissionRate(productName, 'shopee');
+    const est = await estimateCommissionRate(productName, 'shopee');
     commissionRate = est.rate;
     categoryLabel = est.label;
     if (productPrice != null) {

@@ -1,10 +1,9 @@
 import { Router } from 'express';
-import { getSetting } from '../db/schema.js';
 import { parseZaloWebhook, sendZaloText, isZaloEnabled } from '../services/zalo.js';
 import { processAndReply, createBindCode } from '../services/zaloBot.js';
 import { requireAuth } from '../middleware/auth.js';
-import { db } from '../db/schema.js';
 import { generateSubId } from '../services/affiliate.js';
+import { getSetting, one, many, run } from '../db/schema.js';
 
 const router = Router();
 
@@ -12,7 +11,7 @@ const router = Router();
  * Zalo webhook verification (một số setup dùng GET)
  * GET /api/zalo/webhook?verify=xxx
  */
-router.get('/webhook', (req, res) => {
+router.get('/webhook', async (req, res) => {
   const expected = getSetting('zalo_webhook_verify', 'hoantienvn');
   const q = req.query.verify || req.query.challenge || req.query.code;
   if (q && String(q) === String(expected)) {
@@ -58,7 +57,7 @@ router.post('/webhook', async (req, res) => {
 });
 
 /** User web: tạo mã liên kết Zalo */
-router.post('/bind-code', requireAuth, (req, res) => {
+router.post('/bind-code', requireAuth, async (req, res) => {
   const code = createBindCode(req.user.id);
   res.json({
     code,
@@ -68,8 +67,8 @@ router.post('/bind-code', requireAuth, (req, res) => {
 });
 
 /** User web: trạng thái liên kết */
-router.get('/bind-status', requireAuth, (req, res) => {
-  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+router.get('/bind-status', requireAuth, async (req, res) => {
+  const u = await one('SELECT * FROM users WHERE id = ?', [req.user.id]);
   res.json({
     linked: Boolean(u.zalo_id),
     zaloId: u.zalo_id ? `${String(u.zalo_id).slice(0, 4)}***` : null,
@@ -97,12 +96,11 @@ router.post('/test', requireAuth, async (req, res) => {
 });
 
 /** Admin: xem user đã gắn Zalo */
-router.get('/linked-users', requireAuth, (req, res) => {
+router.get('/linked-users', requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin only' });
   }
-  const rows = db
-    .prepare(
+  const rows = /*FIXME db.prepare*/await run(
       `SELECT id, name, email, zalo_id, zalo_name, balance, referral_code
        FROM users WHERE zalo_id IS NOT NULL AND zalo_id != ''
        ORDER BY id DESC LIMIT 100`

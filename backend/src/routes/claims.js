@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db, getSetting } from '../db/schema.js';
+import { getSetting, one, many } from '../db/schema.js';
 import { requireAuth } from '../middleware/auth.js';
 import { limitClaim } from '../middleware/rateLimit.js';
 import { recordPendingOrder } from '../services/wallet.js';
@@ -11,13 +11,6 @@ import { generateSubId, reconcileKey } from '../services/affiliate.js';
 
 const router = Router();
 
-/**
- * Khai báo ĐƠN THIẾU — tuỳ chọn.
- * Luồng chính: mua qua link (sub_id = mã user) → admin import CSV → tự hold.
- * Form này chỉ khi đơn không vào sau 3–7 ngày.
- *
- * Body tối giản: { orderId, orderAmount? }
- */
 router.post('/', requireAuth, limitClaim, async (req, res) => {
   try {
     const {
@@ -37,13 +30,11 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
     }
 
     const amount = Number(orderAmount) || 0;
-    // amount optional — admin/import sẽ chốt; claim thiếu cho phép 0 rồi admin sửa
-
     const ip =
       req.headers['x-forwarded-for']?.toString().split(',')[0] ||
       req.socket.remoteAddress;
 
-    const fraud = evaluateClaimFraud(req.user, {
+    const fraud = await evaluateClaimFraud(req.user, {
       orderId,
       orderAmount: amount || 1000,
       ip,
@@ -57,10 +48,10 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
       });
     }
 
-    // Đã có từ import?
-    const existing = db
-      .prepare('SELECT id, status, source FROM orders WHERE order_id = ?')
-      .get(String(orderId).trim());
+    const existing = await one(
+      'SELECT id, status, source FROM orders WHERE order_id = ?',
+      [String(orderId).trim()]
+    );
     if (existing) {
       return res.status(400).json({
         error:
@@ -74,14 +65,17 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
 
     let resolvedLinkId = linkId || null;
     let productImage = null;
-    let estRate = estimateCommissionRate(productName || '', platform).rate;
+    let estRate = (
+      await estimateCommissionRate(productName || '', platform)
+    ).rate;
     let plat = platform || 'shopee';
     const userSubId = generateSubId(req.user);
 
     if (linkId) {
-      const link = db
-        .prepare('SELECT * FROM cashback_links WHERE id = ? AND user_id = ?')
-        .get(linkId, req.user.id);
+      const link = await one(
+        'SELECT * FROM cashback_links WHERE id = ? AND user_id = ?',
+        [linkId, req.user.id]
+      );
       if (link) {
         resolvedLinkId = link.id;
         productImage = link.product_image;
@@ -89,11 +83,10 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
         if (link.platform) plat = link.platform;
       }
     } else {
-      const link = db
-        .prepare(
-          `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`
-        )
-        .get(req.user.id);
+      const link = await one(
+        `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 1`,
+        [req.user.id]
+      );
       if (link) {
         resolvedLinkId = link.id;
         productImage = link.product_image;
@@ -108,29 +101,26 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
       useAmount > 0 ? Math.round(totalCommission * shareRatio) : 0;
 
     const oid = String(orderId).trim();
-    const order = recordPendingOrder({
+    const order = await recordPendingOrder({
       userId: req.user.id,
       linkId: resolvedLinkId,
       orderId: oid,
       productName:
-        productName ||
-        `Báo thiếu #${oid} (${reconcileKey(userSubId, oid)})`,
+        productName || `Báo thiếu #${oid} (${reconcileKey(userSubId, oid)})`,
       productImage,
       orderAmount: useAmount,
       totalCommission,
       cashbackAmount,
       purchaseTime: purchaseTime || new Date().toISOString(),
       source: 'claim',
-      claimNote:
-        (claimNote || 'User báo đơn thiếu') +
-        ` · sub_id=${userSubId}`,
+      claimNote: (claimNote || 'User báo đơn thiếu') + ` · sub_id=${userSubId}`,
       status: 'pending_review',
       platform: plat,
       fraudScore: fraud.score,
       fraudFlags: fraud.flags,
     });
 
-    createNotification({
+    await createNotification({
       roleTarget: 'admin',
       type: 'claim_missing',
       title: 'Báo đơn thiếu',
@@ -158,22 +148,21 @@ router.post('/', requireAuth, limitClaim, async (req, res) => {
       reconcileKey: reconcileKey(userSubId, oid),
       message:
         useAmount > 0
-          ? 'Đã gửi báo đơn thiếu. Admin đối soát trên Shopee Aff (Sub ID + Mã đơn).'
-          : 'Đã gửi mã đơn. Admin sẽ khớp hoa hồng từ báo cáo Shopee — bạn không cần nhập giá.',
-      tip: 'Luồng thường: không cần form này. Chỉ dùng khi quá 3–7 ngày chưa thấy đơn trong ví.',
+          ? 'Đã gửi báo đơn thiếu. Admin đối soát trên Shopee Aff.'
+          : 'Đã gửi mã đơn. Admin sẽ khớp từ báo cáo Shopee.',
+      tip: 'Luồng thường: không cần form này.',
     });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
 });
 
-router.get('/mine', requireAuth, (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT * FROM orders WHERE user_id = ?
-       ORDER BY created_at DESC LIMIT 100`
-    )
-    .all(req.user.id);
+router.get('/mine', requireAuth, async (req, res) => {
+  const rows = await many(
+    `SELECT * FROM orders WHERE user_id = ?
+     ORDER BY created_at DESC LIMIT 100`,
+    [req.user.id]
+  );
 
   const timelineStatus = {
     pending_review: 1,
@@ -211,7 +200,7 @@ router.get('/mine', requireAuth, (req, res) => {
     reconcileHint: `Trên Shopee Aff: lọc Sub ID = ${subId} → cột Order ID = mã đơn`,
     guide:
       getSetting('claim_guide', '') ||
-      'Mua qua link hoàn tiền là đủ. Đơn tự vào khi admin import báo cáo. Chỉ báo thiếu nếu sau 3–7 ngày chưa thấy.',
+      'Mua qua link hoàn tiền là đủ. Đơn tự vào khi admin import báo cáo.',
     holdDays: parseInt(getSetting('hold_days', '7'), 10),
     claimOptional: true,
   });

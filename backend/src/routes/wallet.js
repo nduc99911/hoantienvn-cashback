@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/schema.js';
+import { one, many, run, withTransaction, sqlNow, getSetting } from '../db/schema.js';
 import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import {
   requestWithdraw,
@@ -8,65 +8,60 @@ import {
   releaseHeldOrders,
 } from '../services/wallet.js';
 import { notifyWithdraw } from '../services/telegram.js';
-import { getSetting } from '../db/schema.js';
 
 const router = Router();
 
-// Nhả hold khi user mở ví
 function maybeRelease() {
-  try {
-    releaseHeldOrders();
-  } catch {
-    /* ignore */
-  }
+  releaseHeldOrders().catch(() => {});
 }
 
-router.get('/summary', requireAuth, (req, res) => {
-  maybeRelease();
-  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
-  const orderStats = db
-    .prepare(
+router.get('/summary', requireAuth, async (req, res) => {
+  try {
+    maybeRelease();
+    const u = await one('SELECT * FROM users WHERE id = ?', [req.user.id]);
+    const orderStats = await one(
       `SELECT
          COUNT(*) as totalOrders,
          COALESCE(SUM(CASE WHEN status IN ('pending','completed','pending_review') THEN cashback_amount ELSE 0 END),0) as pendingCashback,
          COALESCE(SUM(CASE WHEN status = 'held' THEN cashback_amount ELSE 0 END),0) as heldCashback,
          COALESCE(SUM(CASE WHEN status = 'paid' THEN cashback_amount ELSE 0 END),0) as paidCashback
-       FROM orders WHERE user_id = ?`
-    )
-    .get(u.id);
-
-  const refCount = db
-    .prepare('SELECT COUNT(*) as c FROM users WHERE referred_by = ?')
-    .get(u.id).c;
-
-  const referralEarn = db
-    .prepare(
+       FROM orders WHERE user_id = ?`,
+      [u.id]
+    );
+    const refCount = await one(
+      'SELECT COUNT(*) as c FROM users WHERE referred_by = ?',
+      [u.id]
+    );
+    const referralEarn = await one(
       `SELECT COALESCE(SUM(amount),0) as total FROM wallet_transactions
-       WHERE user_id = ? AND type IN ('referral_f1','referral_f2') AND status = 'completed'`
-    )
-    .get(u.id).total;
+       WHERE user_id = ? AND type IN ('referral_f1','referral_f2') AND status = 'completed'`,
+      [u.id]
+    );
 
-  res.json({
-    balance: u.balance,
-    pendingBalance: u.pending_balance,
-    heldBalance: u.held_balance || 0,
-    totalOrders: orderStats.totalOrders,
-    paidCashback: orderStats.paidCashback,
-    heldCashback: orderStats.heldCashback,
-    referralCount: refCount,
-    referralEarn,
-    referralCode: u.referral_code,
-    holdDays: parseInt(getSetting('hold_days', '7'), 10),
-  });
+    res.json({
+      balance: u.balance,
+      pendingBalance: u.pending_balance,
+      heldBalance: u.held_balance || 0,
+      totalOrders: Number(orderStats?.totalOrders || 0),
+      paidCashback: Number(orderStats?.paidCashback || 0),
+      heldCashback: Number(orderStats?.heldCashback || 0),
+      referralCount: Number(refCount?.c || 0),
+      referralEarn: Number(referralEarn?.total || 0),
+      referralCode: u.referral_code,
+      holdDays: parseInt(getSetting('hold_days', '7'), 10),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get('/transactions', requireAuth, (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT * FROM wallet_transactions WHERE user_id = ?
-       ORDER BY created_at DESC LIMIT 100`
-    )
-    .all(req.user.id);
+router.get('/transactions', requireAuth, async (req, res) => {
+  const rows = await many(
+    `SELECT * FROM wallet_transactions WHERE user_id = ?
+     ORDER BY created_at DESC LIMIT 100`,
+    [req.user.id]
+  );
   res.json({
     transactions: rows.map((t) => ({
       id: t.id,
@@ -80,12 +75,11 @@ router.get('/transactions', requireAuth, (req, res) => {
   });
 });
 
-router.get('/orders', requireAuth, (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100`
-    )
-    .all(req.user.id);
+router.get('/orders', requireAuth, async (req, res) => {
+  const rows = await many(
+    `SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC LIMIT 100`,
+    [req.user.id]
+  );
   res.json({
     orders: rows.map((o) => ({
       id: o.id,
@@ -133,7 +127,7 @@ router.post('/withdraw', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'Vui lòng cập nhật số MoMo' });
     }
 
-    const id = requestWithdraw(req.user.id, amt, method, paymentInfo);
+    const id = await requestWithdraw(req.user.id, amt, method, paymentInfo);
     notifyWithdraw({
       userName: req.user.name,
       userId: req.user.id,
@@ -147,12 +141,11 @@ router.post('/withdraw', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/withdrawals', requireAuth, (req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT * FROM withdraw_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`
-    )
-    .all(req.user.id);
+router.get('/withdrawals', requireAuth, async (req, res) => {
+  const rows = await many(
+    `SELECT * FROM withdraw_requests WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
+    [req.user.id]
+  );
   res.json({
     withdrawals: rows.map((w) => ({
       id: w.id,
@@ -166,14 +159,13 @@ router.get('/withdrawals', requireAuth, (req, res) => {
   });
 });
 
-router.get('/referrals', requireAuth, (req, res) => {
-  const f1 = db
-    .prepare(
-      `SELECT id, name, email, created_at,
-        (SELECT COUNT(*) FROM users u2 WHERE u2.referred_by = users.id) as f2Count
-       FROM users WHERE referred_by = ? ORDER BY created_at DESC`
-    )
-    .all(req.user.id);
+router.get('/referrals', requireAuth, async (req, res) => {
+  const f1 = await many(
+    `SELECT id, name, email, created_at,
+      (SELECT COUNT(*) FROM users u2 WHERE u2.referred_by = users.id) as f2Count
+     FROM users WHERE referred_by = ? ORDER BY created_at DESC`,
+    [req.user.id]
+  );
 
   res.json({
     referralCode: req.user.referral_code,
@@ -181,23 +173,20 @@ router.get('/referrals', requireAuth, (req, res) => {
       id: u.id,
       name: u.name,
       email: u.email.replace(/(.{2}).+(@.+)/, '$1***$2'),
-      f2Count: u.f2Count,
+      f2Count: u.f2Count || u.f2count || 0,
       joinedAt: u.created_at,
     })),
   });
 });
 
-// ---- Admin / Demo helpers ----
-
-/** Demo: tạo đơn pending giả lập (khi chưa có Shopee API) */
-router.post('/demo-order', requireAuth, (req, res) => {
+router.post('/demo-order', requireAuth, async (req, res) => {
   try {
     const amount = Number(req.body.orderAmount) || 250000;
     const commission = Number(req.body.commission) || Math.round(amount * 0.14);
     const share = parseFloat(process.env.CASHBACK_SHARE_RATIO || '0.70');
     const cashback = Math.round(commission * share);
 
-    const order = recordPendingOrder({
+    const order = await recordPendingOrder({
       userId: req.user.id,
       linkId: req.body.linkId || null,
       orderId: `DEMO${Date.now()}`,
@@ -216,10 +205,9 @@ router.post('/demo-order', requireAuth, (req, res) => {
   }
 });
 
-/** Demo / Admin: xác nhận đơn → cộng tiền + F1/F2 */
-router.post('/orders/:id/complete', requireAuth, (req, res) => {
+router.post('/orders/:id/complete', requireAuth, async (req, res) => {
   try {
-    const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(req.params.id);
+    const order = await one('SELECT * FROM orders WHERE id = ?', [req.params.id]);
     if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn' });
     if (order.user_id !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Không có quyền' });
@@ -231,18 +219,24 @@ router.post('/orders/:id/complete', requireAuth, (req, res) => {
       return res.status(400).json({ error: 'Đơn đã hủy' });
     }
 
-    db.prepare(
-      `UPDATE orders SET status = 'completed', complete_time = datetime('now'), updated_at = datetime('now') WHERE id = ?`
-    ).run(order.id);
+    await run(
+      `UPDATE orders SET status = 'completed', complete_time = ${sqlNow()}, updated_at = ${sqlNow()} WHERE id = ?`,
+      [order.id]
+    );
 
-    creditOrderCashback(order.id);
-    const updated = db.prepare('SELECT * FROM orders WHERE id = ?').get(order.id);
-    const user = db.prepare('SELECT balance, pending_balance FROM users WHERE id = ?').get(
-      order.user_id
+    await creditOrderCashback(order.id);
+    const updated = await one('SELECT * FROM orders WHERE id = ?', [order.id]);
+    const user = await one(
+      'SELECT balance, pending_balance FROM users WHERE id = ?',
+      [order.user_id]
     );
     res.json({
       success: true,
-      order: { id: updated.id, status: updated.status, cashbackAmount: updated.cashback_amount },
+      order: {
+        id: updated.id,
+        status: updated.status,
+        cashbackAmount: updated.cashback_amount,
+      },
       balance: user.balance,
       pendingBalance: user.pending_balance,
     });
@@ -252,34 +246,42 @@ router.post('/orders/:id/complete', requireAuth, (req, res) => {
   }
 });
 
-router.post('/admin/withdrawals/:id/process', requireAdmin, (req, res) => {
-  const { status, note } = req.body; // approved | rejected | paid
-  if (!['approved', 'rejected', 'paid'].includes(status)) {
-    return res.status(400).json({ error: 'status không hợp lệ' });
-  }
-  const w = db.prepare('SELECT * FROM withdraw_requests WHERE id = ?').get(req.params.id);
-  if (!w) return res.status(404).json({ error: 'Không tìm thấy' });
-
-  const run = db.transaction(() => {
-    if (status === 'rejected' && w.status === 'pending') {
-      db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(
-        w.amount,
-        w.user_id
-      );
-      const bal = db.prepare('SELECT balance FROM users WHERE id = ?').get(w.user_id)
-        .balance;
-      db.prepare(
-        `INSERT INTO wallet_transactions
-         (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-         VALUES (?, 'adjust', ?, ?, 'completed', 'withdraw', ?, ?)`
-      ).run(w.user_id, w.amount, bal, w.id, 'Hoàn tiền do từ chối rút');
+router.post('/admin/withdrawals/:id/process', requireAdmin, async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    if (!['approved', 'rejected', 'paid'].includes(status)) {
+      return res.status(400).json({ error: 'status không hợp lệ' });
     }
-    db.prepare(
-      `UPDATE withdraw_requests SET status = ?, admin_note = ?, processed_at = datetime('now') WHERE id = ?`
-    ).run(status, note || null, w.id);
-  });
-  run();
-  res.json({ success: true });
+    const w = await one('SELECT * FROM withdraw_requests WHERE id = ?', [
+      req.params.id,
+    ]);
+    if (!w) return res.status(404).json({ error: 'Không tìm thấy' });
+
+    await withTransaction(async (tx) => {
+      if (status === 'rejected' && w.status === 'pending') {
+        await tx.run('UPDATE users SET balance = balance + ? WHERE id = ?', [
+          w.amount,
+          w.user_id,
+        ]);
+        const bal = await tx.one('SELECT balance FROM users WHERE id = ?', [
+          w.user_id,
+        ]);
+        await tx.run(
+          `INSERT INTO wallet_transactions
+           (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
+           VALUES (?, 'adjust', ?, ?, 'completed', 'withdraw', ?, ?)`,
+          [w.user_id, w.amount, bal.balance, w.id, 'Hoàn tiền do từ chối rút']
+        );
+      }
+      await tx.run(
+        `UPDATE withdraw_requests SET status = ?, admin_note = ?, processed_at = ${sqlNow()} WHERE id = ?`,
+        [status, note || null, w.id]
+      );
+    });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

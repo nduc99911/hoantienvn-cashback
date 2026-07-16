@@ -8,8 +8,8 @@ import {
 
 const router = Router();
 
-router.get('/', requireAuth, (req, res) => {
-  const rows = listNotifications(req.user);
+router.get('/', requireAuth, async (req, res) => {
+  const rows = await listNotifications(req.user);
   res.json({
     notifications: rows.map((n) => ({
       id: n.id,
@@ -23,13 +23,13 @@ router.get('/', requireAuth, (req, res) => {
   });
 });
 
-router.post('/:id/read', requireAuth, (req, res) => {
-  markRead(req.user.id, req.params.id);
+router.post('/:id/read', requireAuth, async (req, res) => {
+  await markRead(req.user.id, req.params.id);
   res.json({ success: true });
 });
 
-router.post('/read-all', requireAuth, (req, res) => {
-  markAllRead(req.user);
+router.post('/read-all', requireAuth, async (req, res) => {
+  await markAllRead(req.user);
   res.json({ success: true });
 });
 

@@ -1,6 +1,6 @@
-import { db } from '../db/schema.js';
+import { one, many, run } from '../db/schema.js';
 
-export function createNotification({
+export async function createNotification({
   userId = null,
   roleTarget = null,
   type,
@@ -8,26 +8,25 @@ export function createNotification({
   body,
   meta = null,
 }) {
-  const info = db
-    .prepare(
-      `INSERT INTO notifications (user_id, role_target, type, title, body, meta)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  const info = await run(
+    `INSERT INTO notifications (user_id, role_target, type, title, body, meta)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
       userId,
       roleTarget,
       type,
       title,
       body,
-      meta ? JSON.stringify(meta) : null
-    );
+      meta ? JSON.stringify(meta) : null,
+    ]
+  );
 
-  // Push Zalo / Telegram nếu user đã liên kết
   if (userId) {
     try {
-      const u = db
-        .prepare('SELECT zalo_id, telegram_id FROM users WHERE id = ?')
-        .get(userId);
+      const u = await one(
+        'SELECT zalo_id, telegram_id FROM users WHERE id = ?',
+        [userId]
+      );
       const msg = `🔔 ${title}\n${body || ''}`;
       if (u?.zalo_id) {
         import('./zalo.js')
@@ -47,41 +46,42 @@ export function createNotification({
   return info.lastInsertRowid;
 }
 
-export function listNotifications(user, { limit = 50 } = {}) {
+export async function listNotifications(user, { limit = 50 } = {}) {
   if (user.role === 'admin') {
-    return db
-      .prepare(
-        `SELECT * FROM notifications
-         WHERE user_id = ? OR role_target = 'admin' OR role_target = 'all'
-         ORDER BY created_at DESC LIMIT ?`
-      )
-      .all(user.id, limit);
-  }
-  return db
-    .prepare(
+    return many(
       `SELECT * FROM notifications
-       WHERE user_id = ? OR role_target = 'all'
-       ORDER BY created_at DESC LIMIT ?`
-    )
-    .all(user.id, limit);
+       WHERE user_id = ? OR role_target = 'admin' OR role_target = 'all'
+       ORDER BY created_at DESC LIMIT ?`,
+      [user.id, limit]
+    );
+  }
+  return many(
+    `SELECT * FROM notifications
+     WHERE user_id = ? OR role_target = 'all'
+     ORDER BY created_at DESC LIMIT ?`,
+    [user.id, limit]
+  );
 }
 
-export function markRead(userId, id) {
-  db.prepare(
+export async function markRead(userId, id) {
+  await run(
     `UPDATE notifications SET is_read = 1
-     WHERE id = ? AND (user_id = ? OR user_id IS NULL)`
-  ).run(id, userId);
+     WHERE id = ? AND (user_id = ? OR user_id IS NULL)`,
+    [id, userId]
+  );
 }
 
-export function markAllRead(user) {
+export async function markAllRead(user) {
   if (user.role === 'admin') {
-    db.prepare(
+    await run(
       `UPDATE notifications SET is_read = 1
-       WHERE user_id = ? OR role_target IN ('admin','all')`
-    ).run(user.id);
+       WHERE user_id = ? OR role_target IN ('admin','all')`,
+      [user.id]
+    );
   } else {
-    db.prepare(
-      `UPDATE notifications SET is_read = 1 WHERE user_id = ? OR role_target = 'all'`
-    ).run(user.id);
+    await run(
+      `UPDATE notifications SET is_read = 1 WHERE user_id = ? OR role_target = 'all'`,
+      [user.id]
+    );
   }
 }

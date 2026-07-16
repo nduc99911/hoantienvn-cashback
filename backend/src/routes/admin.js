@@ -1,5 +1,16 @@
 import { Router } from 'express';
-import { db, getAllSettings, setSetting, getSetting } from '../db/schema.js';
+import {
+  getAllSettings,
+  setSetting,
+  getSetting,
+  one,
+  many,
+  run,
+  withTransaction,
+  sqlNow,
+  sqlNowMinusDays,
+  isPostgres,
+} from '../db/schema.js';
 import { requireAdmin } from '../middleware/auth.js';
 import {
   approveOrderToHold,
@@ -19,78 +30,92 @@ import { sendTelegram } from '../services/telegram.js';
 const router = Router();
 router.use(requireAdmin);
 
-router.get('/stats', (_req, res) => {
-  const users = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
-  const orders = db.prepare('SELECT COUNT(*) as c FROM orders').get().c;
-  const pendingReview = db
-    .prepare(`SELECT COUNT(*) as c FROM orders WHERE status = 'pending_review'`)
-    .get().c;
-  const held = db
-    .prepare(`SELECT COUNT(*) as c FROM orders WHERE status = 'held'`)
-    .get().c;
-  const pendingWithdraw = db
-    .prepare(`SELECT COUNT(*) as c FROM withdraw_requests WHERE status = 'pending'`)
-    .get().c;
-  const paidCashback = db
-    .prepare(
-      `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'paid'`
-    )
-    .get().s;
-  const heldCashback = db
-    .prepare(
-      `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'held'`
-    )
-    .get().s;
-  const clicks = db.prepare('SELECT COUNT(*) as c FROM click_logs').get().c;
-  const gmv = db
-    .prepare(
-      `SELECT COALESCE(SUM(order_amount),0) as s FROM orders WHERE status IN ('held','paid','pending','pending_review')`
-    )
-    .get().s;
-  const commissionEst = db
-    .prepare(
-      `SELECT COALESCE(SUM(total_commission),0) as s FROM orders WHERE status IN ('held','paid')`
-    )
-    .get().s;
-  const byPlatform = db
-    .prepare(
+router.get('/stats', async (_req, res) => {
+  try {
+    const users = Number((await one('SELECT COUNT(*) as c FROM users'))?.c || 0);
+    const orders = Number((await one('SELECT COUNT(*) as c FROM orders'))?.c || 0);
+    const pendingReview = Number(
+      (await one(`SELECT COUNT(*) as c FROM orders WHERE status = 'pending_review'`))?.c || 0
+    );
+    const held = Number(
+      (await one(`SELECT COUNT(*) as c FROM orders WHERE status = 'held'`))?.c || 0
+    );
+    const pendingWithdraw = Number(
+      (await one(`SELECT COUNT(*) as c FROM withdraw_requests WHERE status = 'pending'`))
+        ?.c || 0
+    );
+    const paidCashback = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'paid'`
+        )
+      )?.s || 0
+    );
+    const heldCashback = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'held'`
+        )
+      )?.s || 0
+    );
+    const clicks = Number(
+      (await one('SELECT COUNT(*) as c FROM click_logs'))?.c || 0
+    );
+    const gmv = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(order_amount),0) as s FROM orders WHERE status IN ('held','paid','pending','pending_review')`
+        )
+      )?.s || 0
+    );
+    const commissionEst = Number(
+      (
+        await one(
+          `SELECT COALESCE(SUM(total_commission),0) as s FROM orders WHERE status IN ('held','paid')`
+        )
+      )?.s || 0
+    );
+    const byPlatform = await many(
       `SELECT platform, COUNT(*) as c, COALESCE(SUM(cashback_amount),0) as cashback
        FROM orders GROUP BY platform`
-    )
-    .all();
-  const last7 = db
-    .prepare(
-      `SELECT date(created_at) as d, COUNT(*) as orders, COALESCE(SUM(cashback_amount),0) as cashback
-       FROM orders WHERE created_at >= datetime('now', '-7 days')
-       GROUP BY date(created_at) ORDER BY d`
-    )
-    .all();
+    );
+    const last7Sql = isPostgres
+      ? `SELECT to_char(created_at, 'YYYY-MM-DD') as d, COUNT(*) as orders, COALESCE(SUM(cashback_amount),0) as cashback
+         FROM orders WHERE created_at >= ${sqlNowMinusDays(7)}
+         GROUP BY to_char(created_at, 'YYYY-MM-DD') ORDER BY d`
+      : `SELECT date(created_at) as d, COUNT(*) as orders, COALESCE(SUM(cashback_amount),0) as cashback
+         FROM orders WHERE created_at >= datetime('now', '-7 days')
+         GROUP BY date(created_at) ORDER BY d`;
+    const last7 = await many(last7Sql);
 
-  res.json({
-    users,
-    orders,
-    pendingReview,
-    held,
-    pendingWithdraw,
-    paidCashback,
-    heldCashback,
-    clicks,
-    gmv,
-    commissionEst,
-    byPlatform,
-    last7,
-    setup: describeAffiliateSetup(),
-    holdDays: parseInt(getSetting('hold_days', '7'), 10),
-  });
+    res.json({
+      users,
+      orders,
+      pendingReview,
+      held,
+      pendingWithdraw,
+      paidCashback,
+      heldCashback,
+      clicks,
+      gmv,
+      commissionEst,
+      byPlatform,
+      last7,
+      setup: describeAffiliateSetup(),
+      holdDays: parseInt(getSetting('hold_days', '7'), 10),
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get('/settings', (_req, res) => {
-  const s = getAllSettings();
-  // hide full telegram token in UI optionally — still return for admin config
+router.get('/settings', async (_req, res) => {
+  const s = await getAllSettings();
   res.json({ settings: s, setup: describeAffiliateSetup() });
 });
 
-router.put('/settings', (req, res) => {
+router.put('/settings', async (req, res) => {
   const allowed = [
     'cashback_share_ratio',
     'default_commission_rate',
@@ -134,9 +159,9 @@ router.put('/settings', (req, res) => {
     'zalo_welcome',
   ];
   for (const key of allowed) {
-    if (req.body[key] !== undefined) setSetting(key, req.body[key]);
+    if (req.body[key] !== undefined) await setSetting(key, req.body[key]);
   }
-  res.json({ settings: getAllSettings(), success: true });
+  res.json({ settings: await getAllSettings(), success: true });
 });
 
 router.post('/telegram/test', async (_req, res) => {
@@ -144,37 +169,40 @@ router.post('/telegram/test', async (_req, res) => {
   res.json(r);
 });
 
-router.get('/orders', (req, res) => {
-  const status = req.query.status;
-  let rows;
-  if (status) {
-    rows = db
-      .prepare(
+router.get('/orders', async (req, res) => {
+  try {
+    const status = req.query.status;
+    let rows;
+    if (status) {
+      rows = await many(
         `SELECT o.*, u.name as user_name, u.email as user_email
          FROM orders o JOIN users u ON u.id = o.user_id
          WHERE o.status = ?
-         ORDER BY o.created_at DESC LIMIT 300`
-      )
-      .all(status);
-  } else {
-    rows = db
-      .prepare(
+         ORDER BY o.created_at DESC LIMIT 300`,
+        [status]
+      );
+    } else {
+      rows = await many(
         `SELECT o.*, u.name as user_name, u.email as user_email
          FROM orders o JOIN users u ON u.id = o.user_id
          ORDER BY o.created_at DESC LIMIT 300`
-      )
-      .all();
-  }
+      );
+    }
 
-  res.json({
-    orders: rows.map((o) => {
-      const clicks = db
-        .prepare(
-          `SELECT COUNT(*) as c FROM click_logs
-           WHERE user_id = ? AND created_at >= datetime(?, '-14 days')`
-        )
-        .get(o.user_id, o.created_at || 'now').c;
-      return {
+    const orders = [];
+    for (const o of rows) {
+      const clicks = await one(
+        `SELECT COUNT(*) as c FROM click_logs
+         WHERE user_id = ? AND created_at >= ${sqlNowMinusDays(14)}`,
+        [o.user_id]
+      );
+      let fraudFlags = [];
+      try {
+        fraudFlags = o.fraud_flags ? JSON.parse(o.fraud_flags) : [];
+      } catch {
+        fraudFlags = [];
+      }
+      orders.push({
         id: o.id,
         orderId: o.order_id,
         userId: o.user_id,
@@ -190,18 +218,24 @@ router.get('/orders', (req, res) => {
         claimNote: o.claim_note,
         adminNote: o.admin_note,
         fraudScore: o.fraud_score,
-        fraudFlags: o.fraud_flags ? JSON.parse(o.fraud_flags) : [],
+        fraudFlags,
         holdUntil: o.hold_until,
-        recentClicks: clicks,
+        recentClicks: Number(clicks?.c || 0),
         createdAt: o.created_at,
-      };
-    }),
-  });
+      });
+    }
+    res.json({ orders });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.post('/orders/:id/approve', (req, res) => {
+router.post('/orders/:id/approve', async (req, res) => {
   try {
-    const order = approveOrderToHold(req.params.id, req.body.note || 'Admin duyệt');
+    const order = await approveOrderToHold(
+      req.params.id,
+      req.body.note || 'Admin duyệt'
+    );
     res.json({
       success: true,
       status: order.status,
@@ -212,37 +246,35 @@ router.post('/orders/:id/approve', (req, res) => {
   }
 });
 
-router.post('/orders/:id/reject', (req, res) => {
+router.post('/orders/:id/reject', async (req, res) => {
   try {
-    rejectOrder(req.params.id, req.body.note || 'Không khớp đối soát');
+    await rejectOrder(req.params.id, req.body.note || 'Không khớp đối soát');
     res.json({ success: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
 });
 
-router.post('/orders/:id/release', (req, res) => {
+router.post('/orders/:id/release', async (req, res) => {
   try {
-    const order = releaseOneOrder(req.params.id, { force: true });
+    const order = await releaseOneOrder(req.params.id, { force: true });
     res.json({ success: true, status: order.status });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
 });
 
-router.post('/hold/release-due', (_req, res) => {
-  const r = releaseHeldOrders();
+router.post('/hold/release-due', async (_req, res) => {
+  const r = await releaseHeldOrders();
   res.json({ success: true, ...r });
 });
 
-router.get('/withdrawals', (_req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT w.*, u.name as user_name, u.email as user_email
-       FROM withdraw_requests w JOIN users u ON u.id = w.user_id
-       ORDER BY w.created_at DESC LIMIT 100`
-    )
-    .all();
+router.get('/withdrawals', async (_req, res) => {
+  const rows = await many(
+    `SELECT w.*, u.name as user_name, u.email as user_email
+     FROM withdraw_requests w JOIN users u ON u.id = w.user_id
+     ORDER BY w.created_at DESC LIMIT 100`
+  );
   res.json({
     withdrawals: rows.map((w) => ({
       id: w.id,
@@ -262,42 +294,51 @@ router.get('/withdrawals', (_req, res) => {
   });
 });
 
-router.post('/withdrawals/:id/process', (req, res) => {
-  const { status, note } = req.body;
-  if (!['approved', 'rejected', 'paid'].includes(status)) {
-    return res.status(400).json({ error: 'status: approved | rejected | paid' });
-  }
-  const w = db.prepare('SELECT * FROM withdraw_requests WHERE id = ?').get(req.params.id);
-  if (!w) return res.status(404).json({ error: 'Không tìm thấy' });
-
-  const run = db.transaction(() => {
-    if (status === 'rejected' && w.status === 'pending') {
-      db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(
-        w.amount,
-        w.user_id
-      );
-      const bal = db.prepare('SELECT balance FROM users WHERE id = ?').get(w.user_id)
-        .balance;
-      db.prepare(
-        `INSERT INTO wallet_transactions
-         (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
-         VALUES (?, 'adjust', ?, ?, 'completed', 'withdraw', ?, ?)`
-      ).run(w.user_id, w.amount, bal, w.id, 'Hoàn tiền do từ chối rút');
+router.post('/withdrawals/:id/process', async (req, res) => {
+  try {
+    const { status, note } = req.body;
+    if (!['approved', 'rejected', 'paid'].includes(status)) {
+      return res.status(400).json({ error: 'status: approved | rejected | paid' });
     }
-    db.prepare(
-      `UPDATE withdraw_requests SET status = ?, admin_note = ?, processed_at = datetime('now') WHERE id = ?`
-    ).run(status, note || null, w.id);
-  });
-  run();
-  res.json({ success: true });
+    const w = await one('SELECT * FROM withdraw_requests WHERE id = ?', [
+      req.params.id,
+    ]);
+    if (!w) return res.status(404).json({ error: 'Không tìm thấy' });
+
+    await withTransaction(async (tx) => {
+      if (status === 'rejected' && w.status === 'pending') {
+        await tx.run('UPDATE users SET balance = balance + ? WHERE id = ?', [
+          w.amount,
+          w.user_id,
+        ]);
+        const bal = await tx.one('SELECT balance FROM users WHERE id = ?', [
+          w.user_id,
+        ]);
+        await tx.run(
+          `INSERT INTO wallet_transactions
+           (user_id, type, amount, balance_after, status, reference_type, reference_id, description)
+           VALUES (?, 'adjust', ?, ?, 'completed', 'withdraw', ?, ?)`,
+          [w.user_id, w.amount, bal.balance, w.id, 'Hoàn tiền do từ chối rút']
+        );
+      }
+      await tx.run(
+        `UPDATE withdraw_requests SET status = ?, admin_note = ?, processed_at = ${sqlNow()} WHERE id = ?`,
+        [status, note || null, w.id]
+      );
+    });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-/** Preview CSV Shopee trước khi import */
-router.post('/import-preview', (req, res) => {
+router.post('/import-preview', async (req, res) => {
   try {
     const csv = req.body.csv;
     if (typeof csv !== 'string' || !csv.trim()) {
-      return res.status(400).json({ error: 'Dán nội dung CSV (AffiliateCommissionReport)' });
+      return res
+        .status(400)
+        .json({ error: 'Dán nội dung CSV (AffiliateCommissionReport)' });
     }
     const preview = previewExportText(csv);
     res.json({ success: true, ...preview });
@@ -306,12 +347,7 @@ router.post('/import-preview', (req, res) => {
   }
 });
 
-/**
- * Import CSV báo cáo Shopee Aff
- * Body: { csv: string } hoặc { filePath: "C:\\...\\AffiliateCommissionReport_....csv" }
- *        hoặc { orders: [...] }
- */
-router.post('/import-orders', (req, res) => {
+router.post('/import-orders', async (req, res) => {
   try {
     const opts = {
       autoHold: req.body.autoHold !== false && req.body.autoCredit !== false,
@@ -320,11 +356,11 @@ router.post('/import-orders', (req, res) => {
 
     let result;
     if (typeof req.body.filePath === 'string' && req.body.filePath.trim()) {
-      result = importFromFile(req.body.filePath.trim(), opts);
+      result = await importFromFile(req.body.filePath.trim(), opts);
     } else if (typeof req.body.csv === 'string' && req.body.csv.trim()) {
-      result = importAffiliateRows(req.body.csv, opts);
+      result = await importAffiliateRows(req.body.csv, opts);
     } else if (Array.isArray(req.body.orders) && req.body.orders.length) {
-      result = importAffiliateRows(req.body.orders, opts);
+      result = await importAffiliateRows(req.body.orders, opts);
     } else {
       return res.status(400).json({
         error: 'Gửi csv (text), filePath, hoặc orders[]',
@@ -339,16 +375,14 @@ router.post('/import-orders', (req, res) => {
   }
 });
 
-router.get('/clicks', (_req, res) => {
-  const rows = db
-    .prepare(
-      `SELECT c.*, u.name as user_name, l.product_name, l.short_code, l.sub_id
-       FROM click_logs c
-       LEFT JOIN users u ON u.id = c.user_id
-       LEFT JOIN cashback_links l ON l.id = c.link_id
-       ORDER BY c.created_at DESC LIMIT 150`
-    )
-    .all();
+router.get('/clicks', async (_req, res) => {
+  const rows = await many(
+    `SELECT c.*, u.name as user_name, l.product_name, l.short_code, l.sub_id
+     FROM click_logs c
+     LEFT JOIN users u ON u.id = c.user_id
+     LEFT JOIN cashback_links l ON l.id = c.link_id
+     ORDER BY c.created_at DESC LIMIT 150`
+  );
   res.json({
     clicks: rows.map((c) => ({
       id: c.id,
@@ -363,13 +397,11 @@ router.get('/clicks', (_req, res) => {
   });
 });
 
-router.get('/users', (_req, res) => {
-  const users = db
-    .prepare(
-      `SELECT id, email, name, role, status, balance, pending_balance, held_balance,
-              referral_code, created_at FROM users ORDER BY id DESC LIMIT 200`
-    )
-    .all();
+router.get('/users', async (_req, res) => {
+  const users = await many(
+    `SELECT id, email, name, role, status, balance, pending_balance, held_balance,
+            referral_code, created_at FROM users ORDER BY id DESC LIMIT 200`
+  );
   res.json({
     users: users.map((u) => ({
       id: u.id,
@@ -386,9 +418,9 @@ router.get('/users', (_req, res) => {
   });
 });
 
-router.post('/users/:id/ban', (req, res) => {
+router.post('/users/:id/ban', async (req, res) => {
   const status = req.body.status === 'active' ? 'active' : 'banned';
-  db.prepare('UPDATE users SET status = ? WHERE id = ?').run(status, req.params.id);
+  await run('UPDATE users SET status = ? WHERE id = ?', [status, req.params.id]);
   res.json({ success: true, status });
 });
 

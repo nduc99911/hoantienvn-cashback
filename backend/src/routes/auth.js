@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db/schema.js';
+import { one, run } from '../db/schema.js';
 import {
   hashPassword,
   comparePassword,
@@ -19,7 +19,6 @@ function publicUser(u) {
     phone: u.phone,
     name: u.name,
     referralCode: u.referral_code,
-    /** Mã Sub ID trên Shopee Aff — cố định, dùng đối soát */
     affSubId: generateSubId(u),
     balance: u.balance,
     pendingBalance: u.pending_balance,
@@ -34,7 +33,7 @@ function publicUser(u) {
   };
 }
 
-router.post('/register', limitAuth, (req, res) => {
+router.post('/register', limitAuth, async (req, res) => {
   try {
     const { email, password, name, phone, referralCode } = req.body;
     if (!email || !password || !name) {
@@ -44,58 +43,59 @@ router.post('/register', limitAuth, (req, res) => {
       return res.status(400).json({ error: 'Mật khẩu tối thiểu 6 ký tự' });
     }
 
-    const exists = db.prepare('SELECT id FROM users WHERE email = ?').get(email.toLowerCase());
+    const exists = await one('SELECT id FROM users WHERE email = ?', [
+      email.toLowerCase(),
+    ]);
     if (exists) {
       return res.status(400).json({ error: 'Email đã được sử dụng' });
     }
 
     let referredBy = null;
     if (referralCode) {
-      const ref = db
-        .prepare('SELECT id FROM users WHERE referral_code = ?')
-        .get(referralCode.toUpperCase());
+      const ref = await one(
+        'SELECT id FROM users WHERE referral_code = ?',
+        [referralCode.toUpperCase()]
+      );
       if (ref) referredBy = ref.id;
     }
 
     let code = generateReferralCode();
-    while (db.prepare('SELECT id FROM users WHERE referral_code = ?').get(code)) {
+    while (await one('SELECT id FROM users WHERE referral_code = ?', [code])) {
       code = generateReferralCode();
     }
 
-    const info = db
-      .prepare(
-        `INSERT INTO users (email, phone, password_hash, name, referral_code, referred_by)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      )
-      .run(
+    const info = await run(
+      `INSERT INTO users (email, phone, password_hash, name, referral_code, referred_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
         email.toLowerCase().trim(),
         phone || null,
         hashPassword(password),
         name.trim(),
         code,
-        referredBy
-      );
+        referredBy,
+      ]
+    );
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
-    const token = signToken(user);
-    res.json({ token, user: publicUser(user) });
+    const user = await one('SELECT * FROM users WHERE id = ?', [
+      info.lastInsertRowid,
+    ]);
+    res.json({ token: signToken(user), user: publicUser(user) });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Đăng ký thất bại' });
   }
 });
 
-router.post('/login', limitAuth, (req, res) => {
-  // blocked users
-  // checked after load
+router.post('/login', limitAuth, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Vui lòng nhập email và mật khẩu' });
     }
-    const user = db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .get(email.toLowerCase().trim());
+    const user = await one('SELECT * FROM users WHERE email = ?', [
+      email.toLowerCase().trim(),
+    ]);
     if (!user || !comparePassword(password, user.password_hash)) {
       return res.status(401).json({ error: 'Email hoặc mật khẩu không đúng' });
     }
@@ -109,14 +109,15 @@ router.post('/login', limitAuth, (req, res) => {
   }
 });
 
-router.get('/me', requireAuth, (req, res) => {
+router.get('/me', requireAuth, async (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
-router.put('/profile', requireAuth, (req, res) => {
+router.put('/profile', requireAuth, async (req, res) => {
   try {
-    const { name, phone, bankName, bankAccount, bankHolder, momoPhone } = req.body;
-    db.prepare(
+    const { name, phone, bankName, bankAccount, bankHolder, momoPhone } =
+      req.body;
+    await run(
       `UPDATE users SET
         name = COALESCE(?, name),
         phone = COALESCE(?, phone),
@@ -124,17 +125,18 @@ router.put('/profile', requireAuth, (req, res) => {
         bank_account = COALESCE(?, bank_account),
         bank_holder = COALESCE(?, bank_holder),
         momo_phone = COALESCE(?, momo_phone)
-       WHERE id = ?`
-    ).run(
-      name || null,
-      phone || null,
-      bankName || null,
-      bankAccount || null,
-      bankHolder || null,
-      momoPhone || null,
-      req.user.id
+       WHERE id = ?`,
+      [
+        name || null,
+        phone || null,
+        bankName || null,
+        bankAccount || null,
+        bankHolder || null,
+        momoPhone || null,
+        req.user.id,
+      ]
     );
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+    const user = await one('SELECT * FROM users WHERE id = ?', [req.user.id]);
     res.json({ user: publicUser(user) });
   } catch (e) {
     console.error(e);

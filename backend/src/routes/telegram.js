@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { db, getSetting } from '../db/schema.js';
+import { getSetting, one, many, run } from '../db/schema.js';
 import {
   isTelegramBotEnabled,
   getMe,
@@ -39,7 +39,7 @@ router.get('/status', async (_req, res) => {
   });
 });
 
-router.post('/bind-code', requireAuth, (req, res) => {
+router.post('/bind-code', requireAuth, async (req, res) => {
   const code = createTelegramBindCode(req.user.id);
   res.json({
     code,
@@ -47,8 +47,8 @@ router.post('/bind-code', requireAuth, (req, res) => {
   });
 });
 
-router.get('/bind-status', requireAuth, (req, res) => {
-  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+router.get('/bind-status', requireAuth, async (req, res) => {
+  const u = await one('SELECT * FROM users WHERE id = ?', [req.user.id]);
   res.json({
     linked: Boolean(u.telegram_id),
     telegramId: u.telegram_id || null,
@@ -74,12 +74,11 @@ router.post('/test', requireAuth, async (req, res) => {
   res.json(r);
 });
 
-router.get('/linked-users', requireAuth, (req, res) => {
+router.get('/linked-users', requireAuth, async (req, res) => {
   if (req.user.role !== 'admin') {
     return res.status(403).json({ error: 'Admin only' });
   }
-  const rows = db
-    .prepare(
+  const rows = /*FIXME db.prepare*/await run(
       `SELECT id, name, email, telegram_id, telegram_name, balance, referral_code
        FROM users WHERE telegram_id IS NOT NULL AND telegram_id != ''
        ORDER BY id DESC LIMIT 100`

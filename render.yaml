@@ -5,22 +5,30 @@ services:
     name: hoantienvn-api
     runtime: node
     rootDir: backend
+    plan: free
     buildCommand: npm install
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        value: 4000
       - key: JWT_SECRET
         generateValue: true
-      - key: SHOPEE_AFFILIATE_ID
+      - key: DATABASE_URL
         sync: false
+      - key: SHOPEE_AFFILIATE_ID
+        value: "17320010599"
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       - key: TELEGRAM_MODE
         value: polling
+      - key: TELEGRAM_BOT_ENABLED
+        value: "1"
       - key: REDIRECT_MODE
         value: shopee_an_redir
       - key: CASHBACK_SHARE_RATIO
         value: "0.70"
+      - key: HOLD_DAYS
+        value: "7"
+      - key: SITE_URL
+        sync: false

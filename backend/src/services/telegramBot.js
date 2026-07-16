@@ -1,10 +1,8 @@
 /**
- * Bot Telegram user — lệnh giống Zalo
- * - Dán link Shopee → an_redir
- * - /sodu /subid /don /lienket /start
+ * Bot Telegram user — lệnh cashback Shopee
  */
 import { customAlphabet } from 'nanoid';
-import { db, getSetting } from '../db/schema.js';
+import { one, many, run, getSetting } from '../db/schema.js';
 import {
   hashPassword,
   generateReferralCode,
@@ -28,11 +26,16 @@ function formatVnd(n) {
   return `${Math.round(n || 0).toLocaleString('vi-VN')}đ`;
 }
 
-function findByTelegram(chatId) {
+function escapeHtml(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+async function findByTelegram(chatId) {
   if (!chatId) return null;
-  return db
-    .prepare('SELECT * FROM users WHERE telegram_id = ?')
-    .get(String(chatId));
+  return one('SELECT * FROM users WHERE telegram_id = ?', [String(chatId)]);
 }
 
 function menuText() {
@@ -50,43 +53,43 @@ function menuText() {
 }
 
 async function ensureTgUser(chatId, from) {
-  let user = findByTelegram(chatId);
+  let user = await findByTelegram(chatId);
   if (user) return user;
 
   const email = `tg_${chatId}@telegram.hoantien.local`;
-  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  const existing = await one('SELECT * FROM users WHERE email = ?', [email]);
   const displayName =
     [from?.first_name, from?.last_name].filter(Boolean).join(' ') ||
     from?.username ||
     `TG ${String(chatId).slice(-6)}`;
 
   if (existing) {
-    db.prepare(
-      'UPDATE users SET telegram_id = ?, telegram_name = ? WHERE id = ?'
-    ).run(String(chatId), displayName, existing.id);
-    return db.prepare('SELECT * FROM users WHERE id = ?').get(existing.id);
+    await run(
+      'UPDATE users SET telegram_id = ?, telegram_name = ? WHERE id = ?',
+      [String(chatId), displayName, existing.id]
+    );
+    return one('SELECT * FROM users WHERE id = ?', [existing.id]);
   }
 
   let code = generateReferralCode();
-  while (db.prepare('SELECT id FROM users WHERE referral_code = ?').get(code)) {
+  while (await one('SELECT id FROM users WHERE referral_code = ?', [code])) {
     code = generateReferralCode();
   }
 
-  const info = db
-    .prepare(
-      `INSERT INTO users (email, password_hash, name, referral_code, telegram_id, telegram_name)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(
+  const info = await run(
+    `INSERT INTO users (email, password_hash, name, referral_code, telegram_id, telegram_name)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
       email,
       hashPassword(genPass()),
       displayName,
       code,
       String(chatId),
-      displayName
-    );
+      displayName,
+    ]
+  );
 
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+  return one('SELECT * FROM users WHERE id = ?', [info.lastInsertRowid]);
 }
 
 async function cmdLink(user, url) {
@@ -117,38 +120,39 @@ async function cmdLink(user, url) {
   }
 
   let shortCode = generateShortCode();
-  while (
-    db.prepare('SELECT id FROM cashback_links WHERE short_code = ?').get(shortCode)
-  ) {
+  while (await one('SELECT id FROM cashback_links WHERE short_code = ?', [shortCode])) {
     shortCode = generateShortCode();
   }
 
-  db.prepare(
+  await run(
     `INSERT INTO cashback_links
      (user_id, platform, original_url, affiliate_url, short_code, product_name, product_image,
       product_price, commission_rate, cashback_rate, estimated_cashback, sub_id, shop_id, item_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    user.id,
-    result.platform || 'shopee',
-    originLink || result.productLink,
-    outbound,
-    shortCode,
-    result.productName,
-    result.productImage,
-    result.productPrice,
-    result.commissionRate,
-    result.cashbackRate,
-    result.estimatedCashback,
-    subId,
-    result.shopId,
-    result.itemId
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      user.id,
+      result.platform || 'shopee',
+      originLink || result.productLink,
+      outbound,
+      shortCode,
+      result.productName,
+      result.productImage,
+      result.productPrice,
+      result.commissionRate,
+      result.cashbackRate,
+      result.estimatedCashback,
+      subId,
+      result.shopId,
+      result.itemId,
+    ]
   );
 
-  const site = (getSetting('site_url', '') || process.env.PUBLIC_URL || 'http://localhost:5173').replace(
-    /\/$/,
-    ''
-  );
+  const site = (
+    getSetting('site_url', '') ||
+    process.env.PUBLIC_URL ||
+    'http://localhost:5173'
+  ).replace(/\/$/, '');
+
   const priceLine =
     result.productPrice != null
       ? `💰 Giá: ${formatVnd(result.productPrice)}`
@@ -170,15 +174,8 @@ async function cmdLink(user, url) {
   );
 }
 
-function escapeHtml(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function cmdBalance(user) {
-  const u = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+async function cmdBalance(user) {
+  const u = await one('SELECT * FROM users WHERE id = ?', [user.id]);
   return (
     `💰 <b>VÍ CỦA BẠN</b>\n\n` +
     `Khả dụng: <b>${formatVnd(u.balance)}</b>\n` +
@@ -189,13 +186,12 @@ function cmdBalance(user) {
   );
 }
 
-function cmdOrders(user) {
-  const rows = db
-    .prepare(
-      `SELECT order_id, cashback_amount, status, source
-       FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 5`
-    )
-    .all(user.id);
+async function cmdOrders(user) {
+  const rows = await many(
+    `SELECT order_id, cashback_amount, status, source
+     FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 5`,
+    [user.id]
+  );
   if (!rows.length) {
     return '📦 Chưa có đơn. Mua qua link hoàn tiền → admin import báo cáo Aff.';
   }
@@ -212,22 +208,24 @@ function cmdOrders(user) {
   );
 }
 
-function cmdBind(chatId, code) {
+async function cmdBind(chatId, code) {
   const bindCode = String(code || '').trim();
   if (!/^\d{6}$/.test(bindCode)) {
     return '❌ Mã 6 số. Trên web: Ví → Tạo mã Telegram → gõ /lienket 123456';
   }
-  const user = db
-    .prepare('SELECT * FROM users WHERE telegram_bind_code = ?')
-    .get(bindCode);
+  const user = await one(
+    'SELECT * FROM users WHERE telegram_bind_code = ?',
+    [bindCode]
+  );
   if (!user) return '❌ Mã sai hoặc đã dùng. Tạo mã mới trên website.';
 
-  db.prepare('UPDATE users SET telegram_id = NULL WHERE telegram_id = ?').run(
-    String(chatId)
+  await run('UPDATE users SET telegram_id = NULL WHERE telegram_id = ?', [
+    String(chatId),
+  ]);
+  await run(
+    `UPDATE users SET telegram_id = ?, telegram_bind_code = NULL WHERE id = ?`,
+    [String(chatId), user.id]
   );
-  db.prepare(
-    `UPDATE users SET telegram_id = ?, telegram_bind_code = NULL WHERE id = ?`
-  ).run(String(chatId), user.id);
 
   return (
     `✅ Đã liên kết Telegram\n` +
@@ -247,15 +245,10 @@ export async function handleTelegramUpdate(update) {
   const from = msg.from;
 
   if (!text) {
-    await reply(
-      chatId,
-      'Gửi link Shopee hoặc /menu nhé!',
-      false
-    );
+    await reply(chatId, 'Gửi link Shopee hoặc /menu nhé!', false);
     return;
   }
 
-  // strip bot mention: /start@BotName
   const cmd = text.replace(/@\w+/g, '').trim();
   const lower = cmd.toLowerCase();
 
@@ -272,7 +265,7 @@ export async function handleTelegramUpdate(update) {
     /^\/?(?:lienket|li[eê]n\s*k[eê]t|bind)\s*[:=]?\s*(\d{6})$/i
   );
   if (bindM) {
-    await reply(chatId, cmdBind(chatId, bindM[1]), true);
+    await reply(chatId, await cmdBind(chatId, bindM[1]), true);
     return;
   }
 
@@ -286,11 +279,11 @@ export async function handleTelegramUpdate(update) {
     return;
   }
 
-  let user = findByTelegram(chatId);
+  let user = await findByTelegram(chatId);
   if (!user) user = await ensureTgUser(chatId, from);
 
   if (/^\/?(sodu|số dư|so du|vi|ví|balance|wallet)$/i.test(lower)) {
-    await reply(chatId, cmdBalance(user), true);
+    await reply(chatId, await cmdBalance(user), true);
     return;
   }
 
@@ -304,7 +297,7 @@ export async function handleTelegramUpdate(update) {
   }
 
   if (/^\/?(don|đơn|orders)$/i.test(lower)) {
-    await reply(chatId, cmdOrders(user), true);
+    await reply(chatId, await cmdOrders(user), true);
     return;
   }
 
@@ -323,18 +316,13 @@ export async function handleTelegramUpdate(update) {
     return;
   }
 
-  await reply(
-    chatId,
-    `Chưa hiểu 😅\n→ Dán link Shopee\n→ Hoặc /menu`,
-    false
-  );
+  await reply(chatId, `Chưa hiểu 😅\n→ Dán link Shopee\n→ Hoặc /menu`, false);
 }
 
 async function reply(chatId, text, html) {
   return sendTelegramTo(chatId, text, html ? { parse_mode: 'HTML' } : {});
 }
 
-/** Webhook handler */
 export async function processTelegramWebhook(body) {
   if (!body) return;
   try {
@@ -344,7 +332,6 @@ export async function processTelegramWebhook(body) {
   }
 }
 
-/** Long polling — chạy local không cần HTTPS */
 export function startTelegramPolling() {
   if (polling) return;
   if (!getTelegramToken()) {
@@ -363,16 +350,15 @@ export function startTelegramPolling() {
   (async function loop() {
     while (polling) {
       try {
-        const updates = await import('./telegram.js').then((m) =>
-          m.getUpdates(pollOffset)
-        );
+        const { getUpdates } = await import('./telegram.js');
+        const updates = await getUpdates(pollOffset);
         for (const u of updates) {
           pollOffset = u.update_id + 1;
           await handleTelegramUpdate(u);
         }
       } catch (e) {
         console.error('[tg] poll error', e.message);
-        await sleep(3000);
+        await new Promise((r) => setTimeout(r, 3000));
       }
     }
   })();
@@ -382,20 +368,14 @@ export function stopTelegramPolling() {
   polling = false;
 }
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-export function createTelegramBindCode(userId) {
+export async function createTelegramBindCode(userId) {
   let code = genBind();
-  while (
-    db.prepare('SELECT id FROM users WHERE telegram_bind_code = ?').get(code)
-  ) {
+  while (await one('SELECT id FROM users WHERE telegram_bind_code = ?', [code])) {
     code = genBind();
   }
-  db.prepare('UPDATE users SET telegram_bind_code = ? WHERE id = ?').run(
+  await run('UPDATE users SET telegram_bind_code = ? WHERE id = ?', [
     code,
-    userId
-  );
+    userId,
+  ]);
   return code;
 }

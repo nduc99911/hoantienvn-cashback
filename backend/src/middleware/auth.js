@@ -1,14 +1,14 @@
 import { verifyToken } from '../utils/auth.js';
-import { db } from '../db/schema.js';
+import { one } from '../db/schema.js';
 
-export function requireAuth(req, res, next) {
+export async function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Vui lòng đăng nhập' });
   }
   try {
     const payload = verifyToken(header.slice(7));
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+    const user = await one('SELECT * FROM users WHERE id = ?', [payload.id]);
     if (!user) return res.status(401).json({ error: 'Tài khoản không tồn tại' });
     req.user = user;
     next();
@@ -17,12 +17,12 @@ export function requireAuth(req, res, next) {
   }
 }
 
-export function optionalAuth(req, res, next) {
+export async function optionalAuth(req, res, next) {
   const header = req.headers.authorization;
   if (header?.startsWith('Bearer ')) {
     try {
       const payload = verifyToken(header.slice(7));
-      req.user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+      req.user = await one('SELECT * FROM users WHERE id = ?', [payload.id]);
     } catch {
       /* ignore */
     }
@@ -30,9 +30,9 @@ export function optionalAuth(req, res, next) {
   next();
 }
 
-export function requireAdmin(req, res, next) {
-  requireAuth(req, res, () => {
-    if (req.user.role !== 'admin') {
+export async function requireAdmin(req, res, next) {
+  await requireAuth(req, res, async () => {
+    if (req.user?.role !== 'admin') {
       return res.status(403).json({ error: 'Không có quyền admin' });
     }
     next();
