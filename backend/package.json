@@ -8,7 +8,10 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "seed": "node src/db/seed.js",
-    "zca:login": "node scripts/zca-login-qr.js"
+    "zca:login": "node scripts/zca-login-qr.js",
+    "zca:refresh": "node scripts/zca-refresh.js",
+    "zca:refresh:local": "node scripts/zca-refresh.js --local-only",
+    "zca:refresh:reuse": "node scripts/zca-refresh.js --reuse-session"
   },
   "dependencies": {
     "@sentry/node": "^9.47.1",

@@ -8,11 +8,9 @@
  * Quét QR bằng app Zalo (ACC PHỤ khuyến nghị).
  * Sau khi OK → file data/zca-session.json
  *
- * Deploy Render: encode session
- *   node -e "console.log(Buffer.from(require('fs').readFileSync('data/zca-session.json')).toString('base64'))"
- * Set env:
- *   ZCA_ENABLED=1
- *   ZCA_SESSION_B64=<chuỗi base64>
+ * Gợi ý: dùng tool full auto khi die:
+ *   npm run zca:refresh
+ * (QR → B64 → clipboard → optional push Render)
  *
  * ⚠️ Không commit session. Không dùng acc chính.
  */
