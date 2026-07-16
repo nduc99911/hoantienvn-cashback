@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+**/node_modules/
+
+# build
+dist/
+**/dist/
+.vercel/
+.next/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+backend/.env
+**/.env.local
+
+# database
+backend/data/
+*.db
+*.db-*
+*.sqlite
+
+# logs / os
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.pem
+
+# debug
+npm-debug.log*
+.turbo/

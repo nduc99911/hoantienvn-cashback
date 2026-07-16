@@ -1,0 +1,18 @@
+{
+  "name": "HoanTienVN - Hoàn tiền Shopee",
+  "short_name": "HoanTienVN",
+  "description": "Cashback Shopee từ hoa hồng affiliate",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff7ed",
+  "theme_color": "#EE4D2D",
+  "lang": "vi",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

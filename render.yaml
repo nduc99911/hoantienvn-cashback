@@ -1,0 +1,26 @@
+# Deploy backend free tier: https://render.com
+# Frontend riêng trên Vercel
+services:
+  - type: web
+    name: hoantienvn-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SHOPEE_AFFILIATE_ID
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_MODE
+        value: polling
+      - key: REDIRECT_MODE
+        value: shopee_an_redir
+      - key: CASHBACK_SHARE_RATIO
+        value: "0.70"
