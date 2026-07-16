@@ -29,8 +29,14 @@ export async function createNotification({
       );
       const msg = `🔔 ${title}\n${body || ''}`;
       if (u?.zalo_id) {
-        import('./zalo.js')
-          .then(({ sendZaloText }) => sendZaloText(u.zalo_id, msg))
+        import('./zcaPersonal.js')
+          .then(async ({ isZcaOnline, sendZcaText }) => {
+            if (isZcaOnline()) {
+              return sendZcaText(u.zalo_id, msg);
+            }
+            const { sendZaloText } = await import('./zalo.js');
+            return sendZaloText(u.zalo_id, msg);
+          })
           .catch(() => {});
       }
       if (u?.telegram_id) {

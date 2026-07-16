@@ -24,6 +24,11 @@ import { releaseHeldOrders } from './services/wallet.js';
 import { isZaloEnabled } from './services/zalo.js';
 import { isTelegramBotEnabled } from './services/telegram.js';
 import { startTelegramPolling } from './services/telegramBot.js';
+import {
+  startZcaPersonal,
+  isZcaEnabled,
+  isZcaOnline,
+} from './services/zcaPersonal.js';
 
 initSentry();
 
@@ -57,9 +62,12 @@ app.get('/api/health', (_req, res) => {
       'multi_platform',
       'rate_limit',
       'telegram_bot',
+      'zalo_personal_zca',
       'supabase',
     ],
     zaloBot: isZaloEnabled(),
+    zaloPersonal: isZcaEnabled(),
+    zaloPersonalOnline: isZcaOnline(),
     telegramBot: isTelegramBotEnabled(),
     setup: describeAffiliateSetup(),
   });
@@ -210,9 +218,11 @@ app.listen(PORT, '0.0.0.0', () => {
     `🔗 Affiliate ID: ${setup.affiliateId || 'CHƯA SET'} | redirect: ${setup.mode}`
   );
   console.log(
-    `💬 Telegram bot: ${
-      isTelegramBotEnabled() ? 'BẬT' : 'TẮT'
-    } | Zalo: ${isZaloEnabled() ? 'BẬT' : 'TẮT'}`
+    `💬 Telegram: ${isTelegramBotEnabled() ? 'BẬT' : 'TẮT'} | Zalo OA: ${
+      isZaloEnabled() ? 'BẬT' : 'TẮT'
+    } | Zalo personal(zca): ${isZcaEnabled() ? 'BẬT' : 'TẮT'}${
+      isZcaOnline() ? ' ONLINE' : ''
+    }`
   );
   console.log(`⏰ Cron hold: mỗi 15 phút\n`);
 
@@ -223,4 +233,10 @@ app.listen(PORT, '0.0.0.0', () => {
       console.error('[tg] start poll', e.message);
     }
   }, 1500);
+
+  setTimeout(() => {
+    startZcaPersonal().catch((e) =>
+      console.error('[zca] start', e.message)
+    );
+  }, 2500);
 });

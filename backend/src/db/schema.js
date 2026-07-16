@@ -243,6 +243,9 @@ async function seedDefaults() {
     zalo_bot_enabled: '0',
     zalo_webhook_verify: 'hoantienvn',
     zalo_welcome: 'Chào bạn! Bot HoanTienVN.',
+    /** zca-js personal (unofficial) — prefer env ZCA_ENABLED */
+    zalo_personal_enabled: process.env.ZCA_ENABLED === '1' ? '1' : '0',
+    zalo_personal_allow_group: process.env.ZCA_ALLOW_GROUP === '1' ? '1' : '0',
   };
 
   for (const [k, v] of Object.entries(defaults)) {

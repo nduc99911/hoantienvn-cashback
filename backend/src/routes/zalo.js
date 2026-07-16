@@ -1,6 +1,13 @@
 import { Router } from 'express';
 import { parseZaloWebhook, sendZaloText, isZaloEnabled } from '../services/zalo.js';
 import { processAndReply, createBindCode } from '../services/zaloBot.js';
+import {
+  zcaStatus,
+  isZcaOnline,
+  sendZcaText,
+  startZcaPersonal,
+  stopZcaPersonal,
+} from '../services/zcaPersonal.js';
 import { requireAuth } from '../middleware/auth.js';
 import { generateSubId } from '../services/affiliate.js';
 import { getSetting, one, many, run } from '../db/schema.js';
@@ -56,13 +63,46 @@ router.post('/webhook', async (req, res) => {
   }
 });
 
+/** Trạng thái Zalo personal (zca-js) — public light */
+router.get('/personal/status', (_req, res) => {
+  const s = zcaStatus();
+  res.json({
+    enabled: s.enabled,
+    online: s.online,
+    allowGroup: s.allowGroup,
+    hasCredentials: s.hasCredentials,
+    warning: s.warning,
+  });
+});
+
+/** Admin: chi tiết + restart listener */
+router.get('/personal/admin-status', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  res.json(zcaStatus());
+});
+
+router.post('/personal/restart', requireAuth, async (req, res) => {
+  if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+  stopZcaPersonal();
+  const api = await startZcaPersonal();
+  res.json({ ok: Boolean(api), status: zcaStatus() });
+});
+
 /** User web: tạo mã liên kết Zalo */
 router.post('/bind-code', requireAuth, async (req, res) => {
-  const code = createBindCode(req.user.id);
+  const code = await createBindCode(req.user.id);
+  const viaPersonal = isZcaOnline();
   res.json({
     code,
-    instruction: `Mở Zalo OA → nhắn: LIENKET ${code}`,
+    instruction: viaPersonal
+      ? `Nhắn Zalo (acc bot personal) → lienket ${code}`
+      : `Mở Zalo OA / acc support → nhắn: lienket ${code}`,
     expiresNote: 'Dùng 1 lần. Tạo lại nếu cần.',
+    personalOnline: viaPersonal,
   });
 });
 
@@ -76,6 +116,7 @@ router.get('/bind-status', requireAuth, async (req, res) => {
     bindCode: u.zalo_bind_code || null,
     affSubId: generateSubId(u),
     botEnabled: isZaloEnabled(),
+    personalOnline: isZcaOnline(),
   });
 });
 
@@ -88,10 +129,15 @@ router.post('/test', requireAuth, async (req, res) => {
   if (!zaloUserId) {
     return res.status(400).json({ error: 'Cần zaloUserId (user id trên Zalo OA)' });
   }
-  const r = await sendZaloText(
-    zaloUserId,
-    text || '✅ Test bot HoanTienVN OK'
-  );
+  const msg = text || '✅ Test bot HoanTienVN OK';
+  let r;
+  if (isZcaOnline()) {
+    r = await sendZcaText(zaloUserId, msg);
+    r = { ...r, via: 'zca_personal' };
+  } else {
+    r = await sendZaloText(zaloUserId, msg);
+    r = { ...r, via: 'oa' };
+  }
   res.json(r);
 });
 
