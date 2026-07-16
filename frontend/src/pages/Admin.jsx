@@ -43,6 +43,8 @@ export default function Admin() {
   const [csv, setCsv] = useState('');
   const [importPreview, setImportPreview] = useState(null);
   const [importFileName, setImportFileName] = useState('');
+  const [importResult, setImportResult] = useState(null);
+  const [importBusy, setImportBusy] = useState(false);
   const [blogForm, setBlogForm] = useState({
     title: '',
     excerpt: '',
@@ -158,11 +160,85 @@ export default function Admin() {
   async function act(fn, okMsg) {
     setMsg('');
     try {
-      await fn();
-      setMsg(okMsg);
+      const ret = await fn();
+      // fn có thể trả string để giữ message chi tiết (không bị ghi đè)
+      if (typeof ret === 'string' && ret.trim()) {
+        setMsg(ret);
+      } else if (okMsg) {
+        setMsg(okMsg);
+      }
       await load();
     } catch (e) {
-      setMsg(e.message);
+      setMsg(e.message || 'Lỗi');
+    }
+  }
+
+  async function runImport({ previewOnly = false } = {}) {
+    if (!csv.trim()) {
+      setImportResult({
+        ok: false,
+        title: 'Chưa có dữ liệu CSV',
+        detail: 'Chọn file hoặc dán nội dung CSV trước.',
+      });
+      setMsg('Chưa có CSV — hãy chọn file.');
+      return;
+    }
+    setImportBusy(true);
+    setImportResult(null);
+    setMsg(previewOnly ? 'Đang xem trước…' : 'Đang import…');
+    try {
+      if (previewOnly) {
+        const p = await adminApi.importPreview(csv);
+        setImportPreview(p);
+        const title = `Preview: ${p.totalOrders || 0} đơn · map ${p.mapped ?? '—'} · unmapped ${p.unmapped ?? '—'}`;
+        setImportResult({
+          ok: true,
+          kind: 'preview',
+          title,
+          detail: `Format: ${p.meta?.format || '—'} · Sample ${(p.sample || []).length} dòng`,
+          preview: p,
+        });
+        setMsg(title);
+      } else {
+        const r = await adminApi.importOrders({ csv, autoHold: true });
+        const imported = Number(r.imported) || 0;
+        const failed = Number(r.failed) || 0;
+        const skipped = Number(r.skipped) || 0;
+        const ok = imported > 0 || (failed === 0 && skipped >= 0);
+        const title = `Import xong: ${imported} OK · ${failed} lỗi · skip ${skipped}`;
+        const fails = (r.results || []).filter((x) => x && x.ok === false);
+        setImportResult({
+          ok: imported > 0,
+          kind: 'import',
+          title,
+          detail:
+            (importFileName ? `File: ${importFileName}. ` : '') +
+            (imported > 0
+              ? 'Vào tab Đơn (lọc held) hoặc login user để xem ví.'
+              : failed > 0
+                ? 'Không có đơn nào import được — xem lỗi bên dưới.'
+                : 'Không có đơn mới (có thể trùng order đã import).'),
+          imported,
+          failed,
+          skipped,
+          results: r.results || [],
+          fails,
+        });
+        setImportPreview(null);
+        setMsg(title);
+        await load();
+      }
+    } catch (e) {
+      const err = e.message || String(e);
+      setImportResult({
+        ok: false,
+        kind: 'error',
+        title: 'Import / Preview thất bại',
+        detail: err,
+      });
+      setMsg(`Lỗi: ${err}`);
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -177,7 +253,13 @@ export default function Admin() {
       </div>
 
       {msg && (
-        <div className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
+        <div
+          className={`rounded-xl px-4 py-3 text-sm font-medium ${
+            /^lỗi|error|thất bại|failed/i.test(msg)
+              ? 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200'
+              : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200'
+          }`}
+        >
           {msg}
         </div>
       )}
@@ -553,41 +635,82 @@ export default function Admin() {
               <button
                 type="button"
                 className="btn-secondary"
-                disabled={!csv.trim()}
-                onClick={() =>
-                  act(async () => {
-                    const p = await adminApi.importPreview(csv);
-                    setImportPreview(p);
-                    setMsg(
-                      `Preview: ${p.totalOrders} đơn · map ${p.mapped} · unmapped ${p.unmapped}`
-                    );
-                    return p;
-                  }, 'Preview xong')
-                }
+                disabled={!csv.trim() || importBusy}
+                onClick={() => runImport({ previewOnly: true })}
               >
-                Xem trước
+                {importBusy ? 'Đang xử lý…' : 'Xem trước'}
               </button>
               <button
                 type="button"
                 className="btn-primary"
-                disabled={!csv.trim()}
-                onClick={() =>
-                  act(async () => {
-                    const r = await adminApi.importOrders({ csv, autoHold: true });
-                    setMsg(
-                      `Import: ${r.imported} OK · ${r.failed} lỗi · skip ${r.skipped || 0}` +
-                        (importFileName ? ` · ${importFileName}` : '')
-                    );
-                    setImportPreview(null);
-                    await load();
-                    return r;
-                  }, 'Import CSV xong')
-                }
+                disabled={!csv.trim() || importBusy}
+                onClick={() => runImport({ previewOnly: false })}
               >
-                Import &amp; Hold
+                {importBusy ? 'Đang import…' : 'Import & Hold'}
               </button>
             </div>
           </div>
+
+          {/* Kết quả import — luôn hiện rõ OK / lỗi */}
+          {importResult && (
+            <div
+              className={`rounded-2xl border-2 px-4 py-4 ${
+                importResult.ok
+                  ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40'
+                  : 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/40'
+              }`}
+            >
+              <div
+                className={`text-lg font-extrabold ${
+                  importResult.ok
+                    ? 'text-emerald-800 dark:text-emerald-200'
+                    : 'text-red-800 dark:text-red-200'
+                }`}
+              >
+                {importResult.ok ? '✅ ' : '❌ '}
+                {importResult.title}
+              </div>
+              {importResult.detail && (
+                <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                  {importResult.detail}
+                </p>
+              )}
+              {importResult.kind === 'import' && (
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  <span className="rounded-full bg-emerald-600 px-3 py-1 font-bold text-white">
+                    OK: {importResult.imported ?? 0}
+                  </span>
+                  <span className="rounded-full bg-red-600 px-3 py-1 font-bold text-white">
+                    Lỗi: {importResult.failed ?? 0}
+                  </span>
+                  <span className="rounded-full bg-slate-600 px-3 py-1 font-bold text-white">
+                    Skip: {importResult.skipped ?? 0}
+                  </span>
+                </div>
+              )}
+              {importResult.fails?.length > 0 && (
+                <div className="mt-3 max-h-40 overflow-y-auto rounded-xl bg-white/80 p-2 text-xs dark:bg-slate-900/60">
+                  <div className="mb-1 font-semibold text-red-700">Chi tiết lỗi:</div>
+                  <ul className="space-y-1">
+                    {importResult.fails.slice(0, 20).map((f, i) => (
+                      <li key={i} className="font-mono text-red-800 dark:text-red-300">
+                        {f.orderId || '—'} · {f.subId || ''} · {f.error || 'fail'}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {importResult.ok && importResult.kind === 'import' && (
+                <button
+                  type="button"
+                  className="btn-secondary mt-3 !py-2 text-sm"
+                  onClick={() => setTab('orders')}
+                >
+                  Mở tab Đơn để kiểm tra →
+                </button>
+              )}
+            </div>
+          )}
 
           {importPreview && (
             <div className="rounded-xl border border-slate-100 dark:border-slate-800 overflow-hidden">
