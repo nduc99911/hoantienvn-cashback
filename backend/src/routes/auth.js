@@ -12,6 +12,7 @@ import {
   limitRegister,
   limitRegisterEmail,
   limitCaptcha,
+  limitForgotPassword,
 } from '../middleware/rateLimit.js';
 import { generateSubId } from '../services/affiliate.js';
 import {
@@ -19,6 +20,10 @@ import {
   verifyMathCaptcha,
   isHoneypotFilled,
 } from '../services/captcha.js';
+import {
+  requestPasswordReset,
+  resetPasswordWithToken,
+} from '../services/passwordReset.js';
 
 const router = Router();
 
@@ -169,6 +174,31 @@ router.post('/login', limitAuth, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Đăng nhập thất bại' });
+  }
+});
+
+router.post('/forgot-password', limitForgotPassword, async (req, res) => {
+  try {
+    const result = await requestPasswordReset(req.body?.email);
+    res.json(result);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Không gửi được yêu cầu' });
+  }
+});
+
+router.post('/reset-password', limitForgotPassword, async (req, res) => {
+  try {
+    const { token, password, captchaToken, captchaAnswer } = req.body || {};
+    // optional captcha if provided
+    if (captchaToken) {
+      const c = verifyMathCaptcha(captchaToken, captchaAnswer);
+      if (!c.ok) return res.status(400).json({ error: c.error });
+    }
+    const result = await resetPasswordWithToken(token, password);
+    res.json(result);
+  } catch (e) {
+    res.status(400).json({ error: e.message || 'Đặt lại mật khẩu thất bại' });
   }
 });
 

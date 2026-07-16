@@ -33,6 +33,10 @@ export const authApi = {
   captcha: () => api('/auth/captcha'),
   register: (payload) =>
     api('/auth/register', { method: 'POST', body: payload }),
+  forgotPassword: (email) =>
+    api('/auth/forgot-password', { method: 'POST', body: { email } }),
+  resetPassword: (payload) =>
+    api('/auth/reset-password', { method: 'POST', body: payload }),
   me: () => api('/auth/me'),
   updateProfile: (payload) =>
     api('/auth/profile', { method: 'PUT', body: payload }),

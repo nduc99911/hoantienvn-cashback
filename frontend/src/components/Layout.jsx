@@ -229,15 +229,37 @@ export default function Layout() {
                     Điều khoản
                   </Link>
                 </li>
+                <li>
+                  <Link to="/privacy" className="hover:text-shopee">
+                    Bảo mật
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/cookies" className="hover:text-shopee">
+                    Cookie
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>
               <div className="mb-2 font-semibold">Hỗ trợ</div>
               <p className="text-sm text-slate-500">Zalo / Hotline cấu hình trong Admin</p>
+              <p className="mt-1 text-sm text-slate-500">
+                <a href="mailto:hotro@hoantien.vn" className="hover:text-shopee">
+                  hotro@hoantien.vn
+                </a>
+              </p>
             </div>
           </div>
           <div className="mt-8 border-t border-slate-100 pt-6 text-center text-xs text-slate-400 dark:border-slate-800">
-            © {new Date().getFullYear()} HoanTienVN
+            © {new Date().getFullYear()} HoanTienVN ·{' '}
+            <Link to="/terms" className="hover:text-shopee">
+              Điều khoản
+            </Link>{' '}
+            ·{' '}
+            <Link to="/privacy" className="hover:text-shopee">
+              Bảo mật
+            </Link>
           </div>
         </div>
       </footer>

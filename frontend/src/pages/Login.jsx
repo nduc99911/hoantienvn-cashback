@@ -56,6 +56,14 @@ export default function Login() {
           {error && (
             <div className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
           )}
+          <div className="text-right text-sm">
+            <Link
+              to="/forgot-password"
+              className="font-medium text-shopee hover:underline"
+            >
+              Quên mật khẩu?
+            </Link>
+          </div>
           <button className="btn-primary w-full" disabled={loading}>
             {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
           </button>

@@ -216,6 +216,7 @@ async function seedDefaults() {
     support_zalo: '',
     support_phone: '',
     support_email: 'hotro@hoantien.vn',
+    gsc_verification: process.env.GSC_VERIFICATION || '',
     enable_shopee: '1',
     enable_tiktok: '1',
     enable_lazada: '1',

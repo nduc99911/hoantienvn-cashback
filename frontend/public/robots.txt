@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /orders
+Disallow: /withdraw
+Disallow: /claim
+Disallow: /referrals
+
+# Sitemap chính qua API (hoặc thay domain custom)
+Sitemap: https://hoantienvn-api.onrender.com/api/public/sitemap.xml

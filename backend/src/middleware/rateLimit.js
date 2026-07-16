@@ -96,3 +96,11 @@ export const limitCaptcha = rateLimit({
   windowSeconds: 600,
   message: 'Xin captcha quá nhiều. Đợi vài phút.',
 });
+
+/** Forgot password — 5 / giờ / IP */
+export const limitForgotPassword = rateLimit({
+  keyFn: (req) => `forgot:${clientIp(req)}`,
+  max: 5,
+  windowSeconds: 3600,
+  message: 'Yêu cầu đặt lại mật khẩu quá nhiều. Thử lại sau 1 giờ.',
+});

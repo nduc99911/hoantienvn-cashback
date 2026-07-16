@@ -13,6 +13,11 @@ import Admin from './pages/Admin';
 import Blog from './pages/Blog';
 import Guide from './pages/Guide';
 import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Cookies from './pages/Cookies';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import SeoHead from './components/SeoHead';
 
 function Private({ children }) {
   const { user, loading } = useAuth();
@@ -27,13 +32,19 @@ function Private({ children }) {
 
 export default function App() {
   return (
-    <Routes>
+    <>
+      <SeoHead />
+      <Routes>
       <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route path="guide" element={<Guide />} />
         <Route path="terms" element={<Terms />} />
+        <Route path="privacy" element={<Privacy />} />
+        <Route path="cookies" element={<Cookies />} />
         <Route path="blog" element={<Blog />} />
         <Route path="blog/:slug" element={<Blog />} />
         <Route
@@ -87,5 +98,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }
