@@ -254,9 +254,10 @@ export async function handleZaloMessage({
     lower === 'xin chào'
   ) {
     await ensureZaloUser(zaloUserId, displayName);
+    const site = getSiteUrl();
     const welcome =
       getSetting('zalo_welcome', '') ||
-      'Chào bạn! HoanTienVN — dán link Shopee để lấy link hoàn tiền.';
+      `Chào bạn! HoanTienVN — dán link Shopee để lấy link hoàn tiền.\n🌐 Web: ${site}`;
     return welcome + '\n\n' + menuText();
   }
 
