@@ -172,6 +172,14 @@ export const zaloApi = {
     api('/admin/zalo-personal/restart', { method: 'POST' }),
 };
 
+export const facebookApi = {
+  status: () => api('/facebook/status'),
+  bindCode: () => api('/facebook/bind-code', { method: 'POST' }),
+  bindStatus: () => api('/facebook/bind-status'),
+  test: (payload) => api('/facebook/test', { method: 'POST', body: payload }),
+  linkedUsers: () => api('/facebook/linked-users'),
+};
+
 export const telegramApi = {
   status: () => api('/telegram/status'),
   bindCode: () => api('/telegram/bind-code', { method: 'POST' }),

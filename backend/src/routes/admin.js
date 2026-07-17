@@ -187,6 +187,11 @@ router.put('/settings', async (req, res) => {
     'zalo_personal_enabled',
     'zalo_personal_allow_group',
     'demo_mode_enabled',
+    'facebook_bot_enabled',
+    'facebook_page_token',
+    'facebook_verify_token',
+    'facebook_app_secret',
+    'facebook_welcome',
   ];
   for (const key of allowed) {
     if (req.body[key] !== undefined) await setSetting(key, req.body[key]);

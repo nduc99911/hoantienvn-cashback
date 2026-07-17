@@ -45,6 +45,13 @@ router.get('/config', (_req, res) => {
         getSetting('support_messenger', '') ||
         process.env.SUPPORT_MESSENGER ||
         '',
+      facebookPage:
+        getSetting('support_facebook', '') ||
+        process.env.SUPPORT_FACEBOOK ||
+        '',
+    },
+    facebookBot: {
+      enabled: getSetting('facebook_bot_enabled', '0') === '1',
     },
     guideVideoUrl:
       getSetting('guide_video_url', '') || process.env.GUIDE_VIDEO_URL || '',

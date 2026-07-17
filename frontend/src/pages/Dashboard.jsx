@@ -8,6 +8,7 @@ import {
   linksApi,
   telegramApi,
   zaloApi,
+  facebookApi,
   publicApi,
 } from '../lib/api';
 import CommunityLinks from '../components/CommunityLinks';
@@ -26,6 +27,9 @@ export default function Dashboard() {
   const [zalo, setZalo] = useState(null);
   const [zaloBot, setZaloBot] = useState(null);
   const [zaloBindCode, setZaloBindCode] = useState('');
+  const [fb, setFb] = useState(null);
+  const [fbBot, setFbBot] = useState(null);
+  const [fbBindCode, setFbBindCode] = useState('');
 
   async function load() {
     const [s, t, l] = await Promise.all([
@@ -62,6 +66,16 @@ export default function Dashboard() {
     } catch {
       /* ignore */
     }
+    try {
+      const [fs, fbStatus] = await Promise.all([
+        facebookApi.status().catch(() => null),
+        facebookApi.bindStatus().catch(() => null),
+      ]);
+      setFbBot(fs);
+      setFb(fbStatus);
+    } catch {
+      /* ignore */
+    }
     await refresh();
   }
 
@@ -86,6 +100,23 @@ export default function Dashboard() {
       const r = await zaloApi.bindCode();
       setZaloBindCode(r.code);
       setBindCode('');
+      setFbBindCode('');
+      setMsg(r.instruction);
+      await load();
+    } catch (e) {
+      setMsg(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function genFbCode() {
+    setBusy(true);
+    try {
+      const r = await facebookApi.bindCode();
+      setFbBindCode(r.code);
+      setBindCode('');
+      setZaloBindCode('');
       setMsg(r.instruction);
       await load();
     } catch (e) {
@@ -432,6 +463,69 @@ export default function Dashboard() {
           )}
           {zaloBot?.online && (
             <span className="text-emerald-600"> · Bot online</span>
+          )}
+        </div>
+      </div>
+
+      {/* Facebook Messenger */}
+      <div className="card border-indigo-100 dark:border-indigo-900">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h2 className="font-bold text-lg">📘 Messenger (Facebook Page)</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Chat Fanpage → dán link Shopee. API chính thức Meta (không phải Group).
+            </p>
+            {fb?.linked ? (
+              <p className="mt-2 text-sm text-emerald-600 font-semibold">
+                ✅ Đã liên kết Messenger
+                {fb.facebookName ? ` (${fb.facebookName})` : ''}
+              </p>
+            ) : (
+              <ol className="mt-2 text-sm text-slate-600 dark:text-slate-300 space-y-1 list-decimal list-inside">
+                <li>Bấm « Tạo mã liên kết Facebook »</li>
+                <li>Mở chat Page (link m.me / Fanpage trên web)</li>
+                <li>
+                  Gửi: <b>lienket</b> + mã 6 số
+                </li>
+              </ol>
+            )}
+            {fbBindCode && (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="font-mono text-xl font-black text-indigo-600">
+                  lienket {fbBindCode}
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary !py-1 !px-2 text-xs"
+                  onClick={() => {
+                    navigator.clipboard?.writeText(`lienket ${fbBindCode}`);
+                    setMsg('Đã copy — dán vào Messenger Page');
+                  }}
+                >
+                  Copy lệnh
+                </button>
+              </div>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-secondary !py-2 text-sm shrink-0"
+            onClick={genFbCode}
+            disabled={busy}
+          >
+            {fb?.linked ? 'Tạo mã gắn lại' : 'Tạo mã liên kết Facebook'}
+          </button>
+        </div>
+        <div className="mt-3 text-xs text-slate-400">
+          Lệnh: menu · dán link · sodu · don · lienket
+          {fbBot && !fbBot.enabled && (
+            <span className="text-amber-600">
+              {' '}
+              · Chưa bật (Admin: facebook_bot_enabled + Page token)
+            </span>
+          )}
+          {fbBot?.enabled && (
+            <span className="text-emerald-600"> · Bot đã cấu hình</span>
           )}
         </div>
       </div>

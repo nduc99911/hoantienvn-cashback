@@ -1469,6 +1469,24 @@ export default function Admin() {
               'demo_mode_enabled',
               'Chế độ DEMO (0/1) — bật mới hiện Đơn demo + Xác nhận hoàn tất',
             ],
+            [
+              'facebook_bot_enabled',
+              'Facebook Messenger bot (0/1) — Page API chính thức',
+            ],
+            [
+              'facebook_page_token',
+              'Facebook Page Access Token (Messenger)',
+            ],
+            [
+              'facebook_verify_token',
+              'Facebook Webhook Verify Token (trùng Meta App)',
+            ],
+            ['facebook_app_secret', 'Facebook App Secret (tuỳ chọn)'],
+            ['facebook_welcome', 'Facebook tin chào'],
+            [
+              'support_facebook',
+              'Link Fanpage / m.me (hiện trên web)',
+            ],
             ['admin_bank_bin', 'STK admin — BIN NH (fallback VietQR)'],
             ['admin_bank_account', 'STK admin — số tài khoản (fallback)'],
             ['admin_bank_holder', 'STK admin — chủ TK'],

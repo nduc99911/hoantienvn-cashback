@@ -16,8 +16,10 @@ import notifRoutes from './routes/notifications.js';
 import publicRoutes from './routes/public.js';
 import zaloRoutes from './routes/zalo.js';
 import telegramRoutes from './routes/telegram.js';
+import facebookRoutes from './routes/facebook.js';
 import voucherRoutes from './routes/vouchers.js';
 import googleAuthRoutes from './routes/googleAuth.js';
+import { isFacebookBotEnabled } from './services/facebook.js';
 import { describeAffiliateSetup } from './services/affiliate.js';
 import { buildOutboundUrl } from './services/affiliate.js';
 import { releaseHeldOrders } from './services/wallet.js';
@@ -63,12 +65,14 @@ app.get('/api/health', (_req, res) => {
       'rate_limit',
       'telegram_bot',
       'zalo_personal_zca',
+      'facebook_messenger',
       'supabase',
     ],
     zaloBot: isZaloEnabled(),
     zaloPersonal: isZcaEnabled(),
     zaloPersonalOnline: isZcaOnline(),
     telegramBot: isTelegramBotEnabled(),
+    facebookBot: isFacebookBotEnabled(),
     setup: describeAffiliateSetup(),
   });
 });
@@ -121,6 +125,7 @@ app.use('/api/notifications', notifRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/zalo', zaloRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/facebook', facebookRoutes);
 app.use('/api/vouchers', voucherRoutes);
 app.use('/api/auth/google', googleAuthRoutes);
 

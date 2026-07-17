@@ -166,6 +166,7 @@ export async function initDb() {
     const sql = fs.readFileSync(sqlPath, 'utf8');
     const pg = await import('./pg.js');
     await pg.getPool().query(sql);
+    await migratePgColumns();
   } else {
     await initSqliteTables();
   }
@@ -185,11 +186,32 @@ async function initSqliteTables() {
     'ALTER TABLE users ADD COLUMN phone_verified INTEGER DEFAULT 0',
     'ALTER TABLE users ADD COLUMN google_id TEXT',
     "ALTER TABLE blog_posts ADD COLUMN category TEXT DEFAULT 'Tin tức'",
+    'ALTER TABLE users ADD COLUMN facebook_psid TEXT',
+    'ALTER TABLE users ADD COLUMN facebook_name TEXT',
+    'ALTER TABLE users ADD COLUMN facebook_bind_code TEXT',
   ]) {
     try {
       db.exec(sql);
     } catch {
       /* already exists */
+    }
+  }
+}
+
+/** Cột mới Postgres — idempotent */
+async function migratePgColumns() {
+  if (!isPostgres) return;
+  const alters = [
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_psid TEXT',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_name TEXT',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS facebook_bind_code TEXT',
+  ];
+  const pg = await import('./pg.js');
+  for (const sql of alters) {
+    try {
+      await pg.getPool().query(sql);
+    } catch (e) {
+      console.warn('[db] migrate', e.message);
     }
   }
 }
@@ -259,6 +281,13 @@ async function seedDefaults() {
     zalo_personal_allow_group: process.env.ZCA_ALLOW_GROUP === '1' ? '1' : '0',
     /** Demo: user tạo đơn test + nút xác nhận hoàn tất. Tắt = production */
     demo_mode_enabled: process.env.DEMO_MODE_ENABLED === '1' ? '1' : '0',
+    facebook_bot_enabled: process.env.FACEBOOK_BOT_ENABLED === '1' ? '1' : '0',
+    facebook_page_token: process.env.FACEBOOK_PAGE_ACCESS_TOKEN || '',
+    facebook_verify_token:
+      process.env.FACEBOOK_VERIFY_TOKEN || 'hoantienvn_fb',
+    facebook_app_secret: process.env.FACEBOOK_APP_SECRET || '',
+    facebook_welcome:
+      'Chào bạn! HoanTienVN Messenger — dán link Shopee để lấy link hoàn tiền.',
   };
 
   for (const [k, v] of Object.entries(defaults)) {
