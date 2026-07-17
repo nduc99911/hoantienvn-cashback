@@ -146,6 +146,21 @@ router.get('/robots.txt', (_req, res) => {
     );
 });
 
+/** Google sitemap lastmod: W3C date (YYYY-MM-DD) hoặc datetime đầy đủ */
+function toSitemapLastmod(value) {
+  if (value == null || value === '') return '';
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return '';
+    return value.toISOString().slice(0, 10);
+  }
+  const s = String(value).trim();
+  // Already ISO date / datetime
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toISOString().slice(0, 10);
+}
+
 router.get('/sitemap.xml', async (_req, res) => {
   const base = (
     getSetting('site_url', process.env.SITE_URL || 'https://hoantien.pro.vn')
@@ -170,7 +185,7 @@ router.get('/sitemap.xml', async (_req, res) => {
     );
     blogUrls = posts.map((p) => ({
       path: `/blog/${p.slug}`,
-      lastmod: (p.updated_at || p.created_at || '').toString().slice(0, 10),
+      lastmod: toSitemapLastmod(p.updated_at || p.created_at),
       priority: '0.7',
       changefreq: 'weekly',
     }));
@@ -182,12 +197,11 @@ router.get('/sitemap.xml', async (_req, res) => {
   const body = all
     .map((u) => {
       const last = u.lastmod
-        ? `<lastmod>${u.lastmod}</lastmod>`
+        ? `    <lastmod>${u.lastmod}</lastmod>\n`
         : '';
       return `  <url>
     <loc>${base}${u.path === '/' ? '/' : u.path}</loc>
-    ${last}
-    <changefreq>${u.changefreq || 'weekly'}</changefreq>
+${last}    <changefreq>${u.changefreq || 'weekly'}</changefreq>
     <priority>${u.priority || '0.5'}</priority>
   </url>`;
     })
