@@ -2,7 +2,7 @@
  * Test email production: comms status + admin test + forgot-password
  * Usage: node scripts/test-email-flow.mjs [toEmail]
  */
-const API = (process.env.API_BASE || 'https://hoantienvn-api.onrender.com').replace(
+const API = (process.env.API_BASE || 'https://api.hoantien.pro.vn').replace(
   /\/$/,
   ''
 );

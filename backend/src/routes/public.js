@@ -58,7 +58,7 @@ router.get('/config', (_req, res) => {
     claimGuide: getSetting('claim_guide', ''),
     siteUrl: getSetting(
       'site_url',
-      process.env.SITE_URL || 'https://hoantienvn.vercel.app'
+      process.env.SITE_URL || 'https://hoantien.pro.vn'
     ),
     gscVerification:
       getSetting('gsc_verification', '') ||
@@ -117,12 +117,12 @@ router.get('/stats', async (_req, res) => {
 
 router.get('/robots.txt', (_req, res) => {
   const base = (
-    getSetting('site_url', process.env.SITE_URL || 'https://hoantienvn.vercel.app')
+    getSetting('site_url', process.env.SITE_URL || 'https://hoantien.pro.vn')
   ).replace(/\/$/, '');
   const apiBase = (
+    getSetting('public_url', '') ||
     process.env.PUBLIC_URL ||
-    process.env.RENDER_EXTERNAL_URL ||
-    ''
+    'https://api.hoantien.pro.vn'
   ).replace(/\/$/, '');
   const sitemapUrl = apiBase
     ? `${apiBase}/api/public/sitemap.xml`
@@ -148,7 +148,7 @@ router.get('/robots.txt', (_req, res) => {
 
 router.get('/sitemap.xml', async (_req, res) => {
   const base = (
-    getSetting('site_url', process.env.SITE_URL || 'https://hoantienvn.vercel.app')
+    getSetting('site_url', process.env.SITE_URL || 'https://hoantien.pro.vn')
   ).replace(/\/$/, '');
 
   const staticPaths = [

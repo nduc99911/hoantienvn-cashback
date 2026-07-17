@@ -1,6 +1,6 @@
 // Local dev: VITE_API_URL rỗng → /api (proxy Vite)
 // Production: bắt buộc API Render (fallback nếu quên set env trên Vercel)
-const PROD_API_FALLBACK = 'https://hoantienvn-api.onrender.com';
+const PROD_API_FALLBACK = 'https://api.hoantien.pro.vn';
 const API_BASE = (
   import.meta.env.VITE_API_URL ||
   (import.meta.env.PROD ? PROD_API_FALLBACK : '') ||

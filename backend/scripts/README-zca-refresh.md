@@ -45,7 +45,7 @@ Hoặc set sẵn trong `backend/.env` (không commit):
 RENDER_API_KEY=rnd_xxx
 RENDER_SERVICE_ID=srv_xxx
 # hoặc RENDER_SERVICE_NAME=hoantienvn-api
-RENDER_API_URL=https://hoantienvn-api.onrender.com
+RENDER_API_URL=https://api.hoantien.pro.vn
 ZCA_ALLOW_GROUP=1
 ```
 

@@ -29,7 +29,7 @@ Code đã có sẵn:
      ```
    - **Authorized redirect URIs:** (quan trọng)
      ```
-     https://hoantienvn-api.onrender.com/api/auth/google/callback
+     https://api.hoantien.pro.vn/api/auth/google/callback
      http://localhost:4000/api/auth/google/callback
      ```
 5. **Create** → copy:
@@ -46,9 +46,9 @@ Dashboard Render → service `hoantienvn-api` → **Environment** → Add:
 |-----|--------|
 | `GOOGLE_CLIENT_ID` | `xxxxx.apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | `GOCSPX-...` |
-| `GOOGLE_REDIRECT_URI` | `https://hoantienvn-api.onrender.com/api/auth/google/callback` |
+| `GOOGLE_REDIRECT_URI` | `https://api.hoantien.pro.vn/api/auth/google/callback` |
 | `SITE_URL` | `https://hoantienvn.vercel.app` |
-| `PUBLIC_URL` | `https://hoantienvn-api.onrender.com` |
+| `PUBLIC_URL` | `https://api.hoantien.pro.vn` |
 
 **Save** → **Manual Deploy** (hoặc đợi auto redeploy).
 
@@ -64,7 +64,7 @@ Dashboard Render → service `hoantienvn-api` → **Environment** → Add:
 API check:
 
 ```
-GET https://hoantienvn-api.onrender.com/api/auth/google/status
+GET https://api.hoantien.pro.vn/api/auth/google/status
 → { "enabled": true, ... }
 ```
 

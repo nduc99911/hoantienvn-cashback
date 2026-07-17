@@ -2,7 +2,7 @@
  * Seed nhiều bài blog production
  * Usage: API_BASE=... ADMIN_EMAIL=... ADMIN_PASS=... node scripts/seed-blogs.mjs
  */
-const API = (process.env.API_BASE || 'https://hoantienvn-api.onrender.com').replace(
+const API = (process.env.API_BASE || 'https://api.hoantien.pro.vn').replace(
   /\/$/,
   ''
 );

@@ -21,7 +21,7 @@
  * Env (backend/.env hoặc shell):
  *   RENDER_API_KEY=rnd_...
  *   RENDER_SERVICE_ID=srv-...     (hoặc RENDER_SERVICE_NAME=hoantienvn-api)
- *   RENDER_API_URL=https://hoantienvn-api.onrender.com
+ *   RENDER_API_URL=https://api.hoantien.pro.vn
  *   ZCA_ALLOW_GROUP=1             (khi push lên Render)
  *
  * Lấy API key: https://dashboard.render.com/u/settings#api-keys
@@ -64,7 +64,7 @@ const renderCfg = {
   publicApi: (
     process.env.RENDER_API_URL ||
     process.env.PUBLIC_API_URL ||
-    'https://hoantienvn-api.onrender.com'
+    'https://api.hoantien.pro.vn'
   ).replace(/\/$/, ''),
 };
 

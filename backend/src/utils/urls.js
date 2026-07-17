@@ -13,21 +13,24 @@ function isLocalhost(u) {
 
 /**
  * Base URL public của API (chứa /r/:shortCode).
- * Ưu tiên env production, bỏ qua localhost trong setting.
+ * Ưu tiên Admin public_url → env PUBLIC_URL → fallback domain chính.
+ * (Không ưu tiên RENDER_EXTERNAL_URL vì luôn là *.onrender.com)
  */
 export function getApiPublicUrl() {
   const candidates = [
-    process.env.PUBLIC_URL,
-    process.env.RENDER_EXTERNAL_URL,
     getSetting('public_url', ''),
     getSetting('api_public_url', ''),
+    process.env.PUBLIC_URL,
+    // custom domain chính thức
+    'https://api.hoantien.pro.vn',
+    process.env.RENDER_EXTERNAL_URL,
+    'https://hoantienvn-api.onrender.com',
   ];
   for (const c of candidates) {
     const u = stripSlash(c);
     if (u && !isLocalhost(u)) return u;
   }
-  // Fallback production HoanTienVN
-  return 'https://hoantienvn-api.onrender.com';
+  return 'https://api.hoantien.pro.vn';
 }
 
 /**
@@ -35,16 +38,17 @@ export function getApiPublicUrl() {
  */
 export function getSiteUrl() {
   const candidates = [
-    process.env.SITE_URL,
     getSetting('site_url', ''),
+    process.env.SITE_URL,
+    'https://hoantien.pro.vn',
+    'https://www.hoantien.pro.vn',
+    'https://hoantienvn.vercel.app',
   ];
   for (const c of candidates) {
     const u = stripSlash(c);
     if (u && !isLocalhost(u)) return u;
   }
-  const fromEnv = stripSlash(process.env.SITE_URL || process.env.PUBLIC_URL);
-  if (fromEnv && !isLocalhost(fromEnv)) return fromEnv;
-  return 'https://hoantienvn.vercel.app';
+  return 'https://hoantien.pro.vn';
 }
 
 /** Short link hoàn tiền: https://api.../r/abc123 */

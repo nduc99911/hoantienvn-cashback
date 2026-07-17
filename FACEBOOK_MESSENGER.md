@@ -6,13 +6,13 @@ Bot chat **Messenger với Fanpage** (API chính thức). Không phải bot tron
 
 - Tài khoản Facebook (nên dùng acc chính / Business)
 - Đã có **Facebook Page** (Fanpage) — nếu chưa: facebook.com → Trang → Tạo trang
-- API production đang chạy: `https://hoantienvn-api.onrender.com`
+- API production đang chạy: `https://api.hoantien.pro.vn`
 
 ## Thông số dán vào Meta (copy sẵn)
 
 | Mục | Giá trị |
 |-----|---------|
-| **Callback URL** | `https://hoantienvn-api.onrender.com/api/facebook/webhook` |
+| **Callback URL** | `https://api.hoantien.pro.vn/api/facebook/webhook` |
 | **Verify Token** | `hoantienvn_fb` |
 | **Subscribe fields** | `messages`, `messaging_postbacks` |
 
@@ -80,7 +80,7 @@ Production nên dùng token **không hết hạn** (long-lived) theo docs Meta k
 
 ```
 Callback URL:
-https://hoantienvn-api.onrender.com/api/facebook/webhook
+https://api.hoantien.pro.vn/api/facebook/webhook
 
 Verify token:
 hoantienvn_fb
@@ -92,7 +92,7 @@ hoantienvn_fb
 - **Fail** = Render sleep / sai verify token / API chưa deploy  
 
 **Nếu fail:**  
-- Mở `https://hoantienvn-api.onrender.com/api/ping` (đánh thức Render)  
+- Mở `https://api.hoantien.pro.vn/api/ping` (đánh thức Render)  
 - Admin đã set `facebook_verify_token = hoantienvn_fb`  
 - Chờ 1–2 phút → Verify lại  
 
@@ -192,7 +192,7 @@ Cần **App Review** quyền `pages_messaging` — khi đã test ổn và muốn
 
 - [developers.facebook.com](https://developers.facebook.com/)  
 - [Messenger Quick Start](https://developers.facebook.com/documentation/business-messaging/messenger-platform/getting-started/quick-start)  
-- Status API: `https://hoantienvn-api.onrender.com/api/facebook/status`  
+- Status API: `https://api.hoantien.pro.vn/api/facebook/status`  
 
 ---
 

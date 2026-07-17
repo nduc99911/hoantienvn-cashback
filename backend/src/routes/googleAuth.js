@@ -28,7 +28,7 @@ function clientSecret() {
 function redirectUri() {
   return (
     process.env.GOOGLE_REDIRECT_URI ||
-    `${process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:4000'}/api/auth/google/callback`
+    `${process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || 'https://api.hoantien.pro.vn'}/api/auth/google/callback`
   ).replace(/\/$/, '');
 }
 function frontendBase() {

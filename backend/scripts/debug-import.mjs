@@ -1,4 +1,4 @@
-const API = 'https://hoantienvn-api.onrender.com';
+const API = process.env.API_BASE || 'https://api.hoantien.pro.vn';
 async function api(path, opts = {}) {
   const res = await fetch(API + path, {
     method: opts.method || 'GET',

@@ -18,14 +18,14 @@ Code đã có sẵn. Các mục dưới **cần secret hoặc nội dung thật*
 1. [Google Cloud Console](https://console.cloud.google.com/) → OAuth Client (Web)
 2. Authorized redirect URI:
    ```
-   https://hoantienvn-api.onrender.com/api/auth/google/callback
+   https://api.hoantien.pro.vn/api/auth/google/callback
    ```
    (hoặc `https://api.domain.com/api/auth/google/callback`)
 3. Gửi / set trên Render:
    ```
    GOOGLE_CLIENT_ID=...
    GOOGLE_CLIENT_SECRET=...
-   GOOGLE_REDIRECT_URI=https://hoantienvn-api.onrender.com/api/auth/google/callback
+   GOOGLE_REDIRECT_URI=https://api.hoantien.pro.vn/api/auth/google/callback
    SITE_URL=https://hoantienvn.vercel.app
    ```
 

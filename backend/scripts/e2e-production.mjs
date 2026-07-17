@@ -3,9 +3,9 @@
  *
  * Usage:
  *   node scripts/e2e-production.mjs
- *   API_BASE=https://hoantienvn-api.onrender.com node scripts/e2e-production.mjs
+ *   API_BASE=https://api.hoantien.pro.vn node scripts/e2e-production.mjs
  */
-const API = (process.env.API_BASE || 'https://hoantienvn-api.onrender.com').replace(
+const API = (process.env.API_BASE || 'https://api.hoantien.pro.vn').replace(
   /\/$/,
   ''
 );

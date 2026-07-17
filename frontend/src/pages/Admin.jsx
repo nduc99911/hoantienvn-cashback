@@ -1501,15 +1501,15 @@ export default function Admin() {
             ['support_messenger', 'Messenger m.me URL'],
             [
               'guide_video_url',
-              'Video trang chủ (YouTube URL hoặc .mp4 public, vd. https://hoantienvn.vercel.app/videos/...)',
+              'Video trang chủ (YouTube URL hoặc .mp4 public, vd. https://hoantien.pro.vn/videos/...)',
             ],
             [
               'site_url',
-              'Website frontend (https://hoantienvn.vercel.app) — KHÔNG dùng localhost',
+              'Website frontend (https://hoantien.pro.vn) — KHÔNG dùng localhost',
             ],
             [
               'public_url',
-              'API public (https://hoantienvn-api.onrender.com) — short link /r/xxx',
+              'API public (https://api.hoantien.pro.vn) — short link /r/xxx',
             ],
             ['f1_rate', 'F1 rate (0.20 = 20%)'],
             ['f2_rate', 'F2 rate (0.10 = 10%)'],
@@ -1525,9 +1525,9 @@ export default function Admin() {
                   k === 'guide_video_url'
                     ? 'https://www.youtube.com/watch?v=... hoặc .mp4'
                     : k === 'public_url'
-                      ? 'https://hoantienvn-api.onrender.com'
+                      ? 'https://api.hoantien.pro.vn'
                       : k === 'site_url'
-                        ? 'https://hoantienvn.vercel.app'
+                        ? 'https://hoantien.pro.vn'
                         : undefined
                 }
               />
