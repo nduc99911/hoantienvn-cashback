@@ -15,7 +15,7 @@ import {
 } from './affiliate.js';
 import { analyzeProduct } from './product.js';
 import { sendFacebookText, isFacebookBotEnabled } from './facebook.js';
-import { shortLinkUrl } from '../utils/urls.js';
+import { shortLinkUrl, getSiteUrl } from '../utils/urls.js';
 
 const genBind = customAlphabet('0123456789', 6);
 const genPass = customAlphabet('abcdefghijkmnpqrstuvwxyz23456789', 10);
@@ -25,8 +25,11 @@ function formatVnd(n) {
 }
 
 function menuText() {
+  const site = getSiteUrl();
   return (
     `📋 MENU HoanTienVN (Messenger)\n\n` +
+    `🌐 Website: ${site}\n` +
+    `   Ví · rút tiền · lấy link · mời bạn\n\n` +
     `🔗 Gửi link Shopee — lấy link hoàn tiền\n` +
     `💰 sodu — số dư ví\n` +
     `🏷 subid — mã tracking\n` +
@@ -35,8 +38,9 @@ function menuText() {
     `📝 dangky — tạo TK nhanh\n` +
     `❓ menu — menu này\n\n` +
     `Liên kết web:\n` +
-    `1) Login web → Dashboard → Tạo mã Facebook\n` +
-    `2) Gửi: lienket xxxxxx\n` +
+    `1) Mở ${site} → đăng ký/login\n` +
+    `2) Dashboard → Tạo mã Facebook\n` +
+    `3) Gửi: lienket xxxxxx\n` +
     `→ Cùng ví với website`
   );
 }

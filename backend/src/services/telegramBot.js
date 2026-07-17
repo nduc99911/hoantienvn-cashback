@@ -15,6 +15,7 @@ import {
 } from './affiliate.js';
 import { analyzeProduct } from './product.js';
 import { sendTelegramTo, getTelegramToken } from './telegram.js';
+import { getSiteUrl } from '../utils/urls.js';
 
 const genBind = customAlphabet('0123456789', 6);
 const genPass = customAlphabet('abcdefghijkmnpqrstuvwxyz23456789', 10);
@@ -39,8 +40,11 @@ async function findByTelegram(chatId) {
 }
 
 function menuText() {
+  const site = getSiteUrl();
   return (
     `📋 <b>MENU HoanTienVN</b>\n\n` +
+    `🌐 <b>Website:</b> ${site}\n` +
+    `   Ví · rút tiền · lấy link · mời bạn\n\n` +
     `🔗 Gửi <b>link Shopee</b> — lấy link hoàn tiền\n` +
     `💰 /sodu — số dư ví\n` +
     `🏷 /subid — mã tracking Aff\n` +
@@ -49,8 +53,9 @@ function menuText() {
     `📝 /dangky — tạo TK nhanh (chỉ bot, login web cần liên kết)\n` +
     `❓ /menu — menu này\n\n` +
     `<b>Liên kết web:</b>\n` +
-    `1) Login web → Dashboard → Tạo mã Telegram\n` +
-    `2) Gửi: /lienket xxxxxx\n` +
+    `1) Mở ${site} → đăng ký/login\n` +
+    `2) Dashboard → Tạo mã Telegram\n` +
+    `3) Gửi: /lienket xxxxxx\n` +
     `→ Cùng ví / sub_id với website\n\n` +
     `Mẹo: chỉ cần dán link shopee.vn!`
   );
@@ -255,9 +260,10 @@ export async function handleTelegramUpdate(update) {
 
   if (/^\/(start|menu|help)$/i.test(lower) || /^(menu|help)$/i.test(lower)) {
     await ensureTgUser(chatId, from);
+    const site = getSiteUrl();
     const welcome =
       getSetting('telegram_welcome', '') ||
-      'Chào bạn! Bot HoanTienVN — hoàn tiền Shopee.';
+      `Chào bạn! Bot HoanTienVN — hoàn tiền Shopee.\n🌐 Web: ${site}`;
     await reply(chatId, welcome + '\n\n' + menuText(), true);
     return;
   }
