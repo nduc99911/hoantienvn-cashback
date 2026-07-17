@@ -21,7 +21,11 @@ async function loadSqlite() {
   const { default: Database } = await import('better-sqlite3');
   const dataDir = path.join(__dirname, '../../data');
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-  sqlite = new Database(path.join(dataDir, 'cashback.db'));
+  const dbFile =
+    process.env.SQLITE_PATH || path.join(dataDir, 'cashback.db');
+  const dbDir = path.dirname(dbFile);
+  if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
+  sqlite = new Database(dbFile);
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('foreign_keys = ON');
   return sqlite;

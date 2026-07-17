@@ -268,11 +268,20 @@ export async function handleTelegramUpdate(update) {
     return;
   }
 
-  const bindM = cmd.match(
-    /^\/?(?:lienket|li[eê]n\s*k[eê]t|bind)\s*[:=]?\s*(\d{6})$/i
+  const bindAny = cmd.match(
+    /^\/?(?:lienket|li[eê]n\s*k[eê]t|bind)\s*[:=]?\s*(\d*)$/i
   );
-  if (bindM) {
-    await reply(chatId, await cmdBind(chatId, bindM[1]), true);
+  if (bindAny) {
+    const digits = bindAny[1] || '';
+    if (!/^\d{6}$/.test(digits)) {
+      await reply(
+        chatId,
+        '❌ Mã 6 số. Trên web: Ví → Tạo mã Telegram → gõ /lienket 123456',
+        false
+      );
+      return;
+    }
+    await reply(chatId, await cmdBind(chatId, digits), true);
     return;
   }
 

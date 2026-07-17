@@ -12,7 +12,8 @@
     "zca:refresh": "node scripts/zca-refresh.js",
     "zca:refresh:local": "node scripts/zca-refresh.js --local-only",
     "zca:refresh:reuse": "node scripts/zca-refresh.js --reuse-session",
-    "aff:test-csv": "node scripts/make-test-aff-csv.mjs"
+    "aff:test-csv": "node scripts/make-test-aff-csv.mjs",
+    "test:bind": "node scripts/test-bind-cases.mjs"
   },
   "dependencies": {
     "@sentry/node": "^9.47.1",

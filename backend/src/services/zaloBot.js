@@ -261,11 +261,15 @@ export async function handleZaloMessage({
     return welcome + '\n\n' + menuText();
   }
 
-  const bindM = cmd.match(
-    /^(?:\/)?(?:lienket|li[eê]n\s*k[eê]t|bind|LIENKET)\s*[:=]?\s*(\d{6})$/i
+  const bindAny = cmd.match(
+    /^(?:\/)?(?:lienket|li[eê]n\s*k[eê]t|bind)\s*[:=]?\s*(\d*)$/i
   );
-  if (bindM) {
-    return cmdBind(zaloUserId, bindM[1]);
+  if (bindAny) {
+    const digits = bindAny[1] || '';
+    if (!/^\d{6}$/.test(digits)) {
+      return '❌ Mã 6 số. Trên web: Ví → Tạo mã Zalo → nhắn: lienket 123456';
+    }
+    return cmdBind(zaloUserId, digits);
   }
 
   if (/^(?:\/)?(?:dangky|đăng\s*ký|register)$/i.test(lower)) {
