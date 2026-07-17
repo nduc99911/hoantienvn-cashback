@@ -1,5 +1,11 @@
-// Local: Vite proxy /api → :4000 | Production: VITE_API_URL=https://api...
-const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+// Local dev: VITE_API_URL rỗng → /api (proxy Vite)
+// Production: bắt buộc API Render (fallback nếu quên set env trên Vercel)
+const PROD_API_FALLBACK = 'https://hoantienvn-api.onrender.com';
+const API_BASE = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? PROD_API_FALLBACK : '') ||
+  ''
+).replace(/\/$/, '');
 const API = `${API_BASE}/api`;
 
 function getToken() {
@@ -14,17 +20,31 @@ export async function api(path, options = {}) {
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API}${path}`, {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
+  const url = `${API}${path}`;
+  let res;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (e) {
+    const hint =
+      'Không kết nối được máy chủ. Thử: (1) F5 sau 30s nếu API Render đang sleep, (2) tắt chặn quảng cáo, (3) kiểm tra mạng. API: ' +
+      (API_BASE || '(local /api)');
+    throw new Error(hint);
+  }
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.error || `Lỗi ${res.status}`);
   }
   return data;
+}
+
+/** Debug — xem API base đang dùng */
+export function getApiBase() {
+  return API_BASE || '(relative /api)';
 }
 
 export const authApi = {
