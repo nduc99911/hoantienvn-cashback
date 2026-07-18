@@ -76,6 +76,18 @@ router.get('/stats', async (_req, res) => {
     const clicks = Number(
       (await one('SELECT COUNT(*) as c FROM click_logs'))?.c || 0
     );
+    const linksTotal = Number(
+      (await one('SELECT COUNT(*) as c FROM cashback_links'))?.c || 0
+    );
+    // Link rút gọn + click hôm nay (timezone server / UTC DB)
+    const todayLinksSql = isPostgres
+      ? `SELECT COUNT(*) as c FROM cashback_links WHERE created_at >= CURRENT_DATE`
+      : `SELECT COUNT(*) as c FROM cashback_links WHERE date(created_at) = date('now')`;
+    const todayClicksSql = isPostgres
+      ? `SELECT COUNT(*) as c FROM click_logs WHERE created_at >= CURRENT_DATE`
+      : `SELECT COUNT(*) as c FROM click_logs WHERE date(created_at) = date('now')`;
+    const linksToday = Number((await one(todayLinksSql))?.c || 0);
+    const clicksToday = Number((await one(todayClicksSql))?.c || 0);
     const gmv = Number(
       (
         await one(
@@ -112,6 +124,9 @@ router.get('/stats', async (_req, res) => {
       paidCashback,
       heldCashback,
       clicks,
+      clicksToday,
+      linksTotal,
+      linksToday,
       gmv,
       commissionEst,
       byPlatform,

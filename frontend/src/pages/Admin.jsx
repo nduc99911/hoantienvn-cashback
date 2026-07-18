@@ -383,6 +383,18 @@ export default function Admin() {
             <Mini label="Chờ duyệt" v={stats.pendingReview} accent="text-amber-600" />
             <Mini label="Đang hold" v={stats.held} accent="text-purple-600" />
             <Mini label="Rút chờ" v={stats.pendingWithdraw} />
+            <Mini
+              label="Link rút gọn hôm nay"
+              v={stats.linksToday ?? 0}
+              accent="text-sky-600"
+            />
+            <Mini label="Link rút gọn (tổng)" v={stats.linksTotal ?? 0} />
+            <Mini
+              label="Click hôm nay"
+              v={stats.clicksToday ?? 0}
+              accent="text-sky-600"
+            />
+            <Mini label="Click (tổng)" v={stats.clicks ?? 0} />
             <Mini label="GMV" v={formatVnd(stats.gmv)} />
             <Mini label="HH ước tính" v={formatVnd(stats.commissionEst)} />
             <Mini label="Cashback đã trả" v={formatVnd(stats.paidCashback)} accent="text-emerald-600" />
