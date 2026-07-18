@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import LinkConverter from '../components/LinkConverter';
 import CommunityLinks from '../components/CommunityLinks';
+import GeoModules from '../components/GeoModules';
 
 const steps = [
   {
@@ -134,7 +135,8 @@ export default function Guide() {
         <p>
           Hoàn tiền Shopee (cashback) hoạt động nhờ link affiliate: bạn dán link sản phẩm,
           web tạo short link gắn sub_id, bạn mua qua short link, hệ thống đối soát báo cáo
-          Shopee rồi cộng tiền vào ví. Hold khoảng 7 ngày trước khi rút bank/MoMo.
+          Shopee rồi cộng tiền vào ví. Hold khoảng 7 ngày trước khi rút bank/MoMo. Khác với
+          “trả hàng hoàn tiền” trên app Shopee (hoàn bill khi trả SP).
         </p>
         <p>
           Muốn dùng bot Telegram: đăng ký web trước, tạo mã liên kết, chat bot gửi{' '}
@@ -149,6 +151,11 @@ export default function Guide() {
           .
         </p>
       </div>
+
+      <GeoModules
+        title="Chi tiết chuyên gia — khoảng trống kiến thức cashback Shopee"
+        showCta={false}
+      />
 
       <div className="flex flex-wrap justify-center gap-3">
         <Link to="/register" className="btn-primary">

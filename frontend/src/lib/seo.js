@@ -1,9 +1,12 @@
 /** SEO defaults & per-route meta — HoanTienVN */
 
+import { geoFaqJsonLd, softwareAppJsonLd } from './geoContent.js';
+
 export const SITE_URL = 'https://www.hoantien.pro.vn';
 export const SITE_NAME = 'HoanTienVN';
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/logo-app.jpg`;
 export const SUPPORT_EMAIL = 'hotro@hoantien.pro.vn';
+export { softwareAppJsonLd };
 
 export const DEFAULT_SEO = {
   title: 'Hoàn tiền Shopee uy tín | Cashback về ví – HoanTienVN',
@@ -98,52 +101,8 @@ export function absoluteUrl(path = '/') {
   return `${SITE_URL}${p}`;
 }
 
-export const HOME_FAQ_JSONLD = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Làm sao để được hoàn tiền Shopee?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Đăng ký HoanTienVN, dán link sản phẩm Shopee, lấy short link hoàn tiền, mua và thanh toán qua short link trong 20–30 phút. Sau đối soát, tiền hold rồi vào ví để rút bank/MoMo.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Hoàn tiền Shopee được bao nhiêu phần trăm?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Mức hoàn là phần chia hoa hồng affiliate (thường phần lớn cho user theo cấu hình site). Ước tính hiện khi lấy link; số thật theo báo cáo Shopee Affiliate sau đối soát.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Hold hoàn tiền Shopee bao lâu?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Thường khoảng 7 ngày để giảm rủi ro hủy/hoàn đơn. Hết hold, tiền vào số dư rút được khi đủ mức tối thiểu (thường 50.000đ).',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Vì sao không được hoàn tiền Shopee?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Thường do mua không qua short link, click aff/KOL khác, giỏ cũ, Adblock, thanh toán quá chậm, hoặc hủy đặt lại không qua link. Hãy lấy short link mới và mua lại đúng quy trình.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Rút tiền cashback Shopee về đâu?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Rút về ngân hàng hoặc MoMo trên website khi số dư khả dụng đạt mức tối thiểu. Gửi yêu cầu rút và chờ admin xử lý.',
-      },
-    },
-  ],
-};
+/** FAQPage schema — 10 Q&A information-gain (GEO) */
+export const HOME_FAQ_JSONLD = geoFaqJsonLd();
 
 export function organizationJsonLd() {
   return {

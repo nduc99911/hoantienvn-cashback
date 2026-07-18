@@ -4,6 +4,8 @@ import LinkConverter from '../components/LinkConverter';
 import TipsModal, { openTipsAgain } from '../components/TipsModal';
 import { formatVnd, publicApi, vouchersApi } from '../lib/api';
 import CommunityLinks from '../components/CommunityLinks';
+import GeoModules from '../components/GeoModules';
+import { GEO_FAQ_ITEMS } from '../lib/geoContent';
 
 const steps = [
   {
@@ -23,28 +25,7 @@ const steps = [
   },
 ];
 
-const faqs = [
-  {
-    q: 'Làm sao để được hoàn tiền Shopee?',
-    a: 'Đăng ký HoanTienVN → dán link sản phẩm Shopee → lấy short link hoàn tiền (cashback) → mua qua short link trong 20–30 phút. Sau đối soát, tiền hold rồi vào ví để rút bank/MoMo.',
-  },
-  {
-    q: 'Hoàn tiền Shopee / cashback được bao nhiêu?',
-    a: 'Bạn nhận phần chia hoa hồng affiliate (thường phần lớn theo cấu hình site, ví dụ ~70% HH). Mức thực tế tùy ngành hàng — xem ước tính khi lấy link; số thật theo báo cáo Shopee.',
-  },
-  {
-    q: 'Hold hoàn tiền Shopee bao lâu?',
-    a: 'Thường khoảng 7 ngày sau khi đơn được ghi nhận, để giảm rủi ro hủy/hoàn. Hết hold, tiền vào số dư rút được (tối thiểu thường 50.000đ).',
-  },
-  {
-    q: 'Vì sao không được hoàn tiền Shopee?',
-    a: 'Thường do mua không qua short link, click aff/KOL khác, giỏ cũ, Adblock, thanh toán chậm, hoặc hủy đặt lại. Hãy lấy link hoàn tiền mới và mua lại đúng quy trình.',
-  },
-  {
-    q: 'Cách rút tiền cashback Shopee về bank / MoMo?',
-    a: 'Khi số dư khả dụng đủ mức tối thiểu, vào Rút tiền trên web, nhập STK hoặc MoMo, gửi yêu cầu. Admin duyệt và chuyển khoản.',
-  },
-];
+const faqs = GEO_FAQ_ITEMS;
 
 export default function Home() {
   const [cfg, setCfg] = useState(null);
@@ -315,11 +296,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* FAQ */}
+      {/* Information Gain + AI citation modules (GEO) */}
+      <GeoModules />
+
+      {/* FAQ — khớp FAQPage schema */}
       <section className="mx-auto max-w-3xl px-4 py-14">
         <h2 className="text-center text-2xl font-extrabold">
           Câu hỏi thường gặp về hoàn tiền Shopee
         </h2>
+        <p className="mx-auto mt-2 max-w-lg text-center text-sm text-slate-500">
+          Trả lời trực diện — tối ưu hiển thị FAQ Google &amp; trích dẫn AI search
+        </p>
         <div className="mt-8 space-y-2">
           {faqs.map((f, i) => (
             <div
@@ -346,7 +333,7 @@ export default function Home() {
 
       <section className="pb-16 text-center">
         <Link to="/blog" className="font-semibold text-shopee hover:underline">
-          Xem blog mẹo săn sale →
+          Xem blog mẹo săn sale &amp; hoàn tiền Shopee →
         </Link>
       </section>
     </div>

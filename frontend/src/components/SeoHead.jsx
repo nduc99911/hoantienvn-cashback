@@ -13,6 +13,7 @@ import {
   howToGuideJsonLd,
   organizationJsonLd,
   resolvePageSeo,
+  softwareAppJsonLd,
   websiteJsonLd,
 } from '../lib/seo';
 
@@ -110,6 +111,7 @@ export default function SeoHead({
       setJsonLd('ld-org', organizationJsonLd());
       setJsonLd('ld-website', websiteJsonLd());
       setJsonLd('ld-faq', HOME_FAQ_JSONLD);
+      setJsonLd('ld-app', softwareAppJsonLd());
       setJsonLd('ld-howto', null);
       setJsonLd('ld-article', null);
       setJsonLd(
@@ -119,7 +121,8 @@ export default function SeoHead({
     } else if (pathNorm === '/guide') {
       setJsonLd('ld-org', organizationJsonLd());
       setJsonLd('ld-website', null);
-      setJsonLd('ld-faq', null);
+      setJsonLd('ld-faq', HOME_FAQ_JSONLD);
+      setJsonLd('ld-app', softwareAppJsonLd());
       setJsonLd('ld-howto', howToGuideJsonLd());
       setJsonLd('ld-article', null);
       setJsonLd(
@@ -133,6 +136,7 @@ export default function SeoHead({
       setJsonLd('ld-org', organizationJsonLd());
       setJsonLd('ld-website', null);
       setJsonLd('ld-faq', null);
+      setJsonLd('ld-app', null);
       setJsonLd('ld-howto', null);
       setJsonLd('ld-article', null);
       setJsonLd(
@@ -146,6 +150,7 @@ export default function SeoHead({
       setJsonLd('ld-org', null);
       setJsonLd('ld-website', null);
       setJsonLd('ld-faq', null);
+      setJsonLd('ld-app', null);
       setJsonLd('ld-howto', null);
       setJsonLd(
         'ld-article',
@@ -168,6 +173,7 @@ export default function SeoHead({
       setJsonLd('ld-org', noindex ? null : organizationJsonLd());
       setJsonLd('ld-website', null);
       setJsonLd('ld-faq', null);
+      setJsonLd('ld-app', null);
       setJsonLd('ld-howto', null);
       setJsonLd('ld-article', null);
       setJsonLd('ld-breadcrumb', null);
