@@ -10,12 +10,12 @@ const steps = [
   },
   {
     n: 2,
-    t: 'Lấy link hoàn tiền',
+    t: 'Lấy link hoàn tiền Shopee',
     d: 'Dán link Shopee trên web, Telegram hoặc Zalo bot (đã liên kết). Hệ thống gắn sub_id của bạn.',
   },
   {
     n: 3,
-    t: 'Click link aff và mua',
+    t: 'Click short link aff và mua',
     d: 'Giỏ trống SP đó, không click aff khác, thanh toán trong 20–30 phút, tắt Adblock.',
   },
   {
@@ -25,7 +25,7 @@ const steps = [
   },
   {
     n: 5,
-    t: 'Hold → rút tiền',
+    t: 'Hold → rút tiền cashback',
     d: 'Hold mặc định 7 ngày rồi vào số dư. Rút bank/MoMo từ mức tối thiểu trên web.',
   },
 ];
@@ -34,9 +34,12 @@ export default function Guide() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 space-y-10">
       <div className="text-center max-w-2xl mx-auto">
-        <h1 className="text-3xl font-extrabold">Hướng dẫn hoàn tiền</h1>
+        <h1 className="text-3xl font-extrabold">
+          Hướng dẫn hoàn tiền Shopee từng bước (2026)
+        </h1>
         <p className="mt-2 text-slate-500">
-          Không cần Open API — link an_redir + sub_id + hold an toàn
+          Cách lấy link hoàn tiền Shopee, cashback về ví, liên kết bot Telegram/Zalo —
+          hold minh bạch, rút bank/MoMo
         </p>
         <div className="mt-4 flex justify-center">
           <CommunityLinks />
@@ -124,15 +127,38 @@ export default function Guide() {
         <LinkConverter />
       </div>
 
+      <div className="card shadow-soft prose-blog max-w-3xl mx-auto space-y-3 text-sm text-slate-600 dark:text-slate-300">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+          Tóm tắt cách hoàn tiền Shopee trên HoanTienVN
+        </h2>
+        <p>
+          Hoàn tiền Shopee (cashback) hoạt động nhờ link affiliate: bạn dán link sản phẩm,
+          web tạo short link gắn sub_id, bạn mua qua short link, hệ thống đối soát báo cáo
+          Shopee rồi cộng tiền vào ví. Hold khoảng 7 ngày trước khi rút bank/MoMo.
+        </p>
+        <p>
+          Muốn dùng bot Telegram: đăng ký web trước, tạo mã liên kết, chat bot gửi{' '}
+          <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">/lienket 123456</code>.
+          Đọc thêm blog:{' '}
+          <Link
+            className="text-shopee font-semibold underline"
+            to="/blog/huong-dan-hoan-tien-shopee-tu-a-z-tren-hoantienvn-2026"
+          >
+            cẩm nang hoàn tiền Shopee A–Z
+          </Link>
+          .
+        </p>
+      </div>
+
       <div className="flex flex-wrap justify-center gap-3">
         <Link to="/register" className="btn-primary">
-          Đăng ký miễn phí
+          Đăng ký hoàn tiền Shopee
         </Link>
         <Link to="/dashboard" className="btn-secondary">
           Dashboard / liên kết bot
         </Link>
-        <Link to="/claim" className="btn-secondary">
-          Báo đơn thiếu
+        <Link to="/blog" className="btn-secondary">
+          Blog &amp; cẩm nang
         </Link>
         <Link to="/terms" className="btn-secondary">
           Điều khoản

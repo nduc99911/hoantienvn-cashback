@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { blogApi } from '../lib/api';
+import SeoHead from '../components/SeoHead';
 
 export default function Blog() {
   const { slug } = useParams();
@@ -27,8 +28,12 @@ function BlogList() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 pb-20">
-      <h1 className="text-3xl font-extrabold">Blog &amp; cẩm nang</h1>
-      <p className="mt-2 text-slate-500">Mẹo săn sale, cashback, affiliate</p>
+      <h1 className="text-3xl font-extrabold">
+        Blog hoàn tiền Shopee &amp; mẹo cashback
+      </h1>
+      <p className="mt-2 text-slate-500">
+        Cẩm nang hoàn tiền Shopee, săn sale, hold, rút MoMo, bot Telegram
+      </p>
 
       {categories.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2">
@@ -100,15 +105,34 @@ function BlogPost({ slug }) {
     .split('\n')
     .map((line) => {
       if (line.startsWith('## ')) return `<h2>${line.slice(3)}</h2>`;
+      if (line.startsWith('### ')) return `<h3>${line.slice(4)}</h3>`;
       if (line.trim() === '') return '';
-      return `<p>${line}</p>`;
+      // Escape basic HTML from content lines
+      const safe = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<p>${safe}</p>`;
     })
     .join('');
 
+  const path = `/blog/${slug}`;
+  const desc =
+    post.excerpt ||
+    `Đọc bài ${post.title} trên blog HoanTienVN — cẩm nang hoàn tiền Shopee, cashback và săn sale.`;
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 pb-20">
+      <SeoHead
+        title={`${post.title} | HoanTienVN`}
+        description={desc}
+        path={path}
+        type="article"
+        keywords={`${post.title}, hoàn tiền shopee, cashback shopee`}
+        articleMeta={{ datePublished: post.createdAt }}
+      />
       <Link to="/blog" className="text-sm text-shopee font-semibold">
-        ← Blog
+        ← Blog hoàn tiền Shopee
       </Link>
       {post.category && (
         <div className="mt-3 text-xs font-semibold text-shopee">{post.category}</div>
@@ -119,6 +143,22 @@ function BlogPost({ slug }) {
         {new Date(post.createdAt).toLocaleDateString('vi-VN')}
       </div>
       <div className="prose-blog mt-8" dangerouslySetInnerHTML={{ __html: html }} />
+      <div className="mt-10 rounded-2xl border border-orange-100 bg-orange-50/50 p-4 text-sm dark:border-slate-700 dark:bg-slate-900">
+        <p className="font-semibold text-slate-800 dark:text-slate-100">
+          Bắt đầu hoàn tiền Shopee trên HoanTienVN
+        </p>
+        <p className="mt-1 text-slate-600 dark:text-slate-300">
+          Đăng ký miễn phí, dán link sản phẩm, lấy short link và mua như bình thường.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link to="/register" className="btn-primary !py-2 !px-4 text-sm">
+            Đăng ký ngay
+          </Link>
+          <Link to="/guide" className="btn-secondary !py-2 !px-4 text-sm">
+            Xem hướng dẫn
+          </Link>
+        </div>
+      </div>
     </article>
   );
 }

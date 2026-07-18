@@ -6,6 +6,8 @@ Disallow: /orders
 Disallow: /withdraw
 Disallow: /claim
 Disallow: /referrals
+Disallow: /auth/
+Disallow: /forgot-password
+Disallow: /reset-password
 
-# Sitemap chính qua API (hoặc thay domain custom)
-Sitemap: https://hoantienvn-api.onrender.com/api/public/sitemap.xml
+Sitemap: https://api.hoantien.pro.vn/api/public/sitemap.xml

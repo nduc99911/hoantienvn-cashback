@@ -25,24 +25,24 @@ const steps = [
 
 const faqs = [
   {
-    q: 'Làm sao để được hoàn tiền?',
-    a: 'Đăng ký → dán link Shopee → lấy link hoàn tiền → mua qua link đó trong 20–30 phút. Sau khi hệ thống đối soát, tiền hold rồi vào ví.',
+    q: 'Làm sao để được hoàn tiền Shopee?',
+    a: 'Đăng ký HoanTienVN → dán link sản phẩm Shopee → lấy short link hoàn tiền (cashback) → mua qua short link trong 20–30 phút. Sau đối soát, tiền hold rồi vào ví để rút bank/MoMo.',
   },
   {
-    q: 'Tôi được hoàn bao nhiêu?',
-    a: 'Thường nhận phần lớn hoa hồng affiliate (cấu hình site). Mức thực tế tùy ngành hàng — xem ước tính trên từng link.',
+    q: 'Hoàn tiền Shopee / cashback được bao nhiêu?',
+    a: 'Bạn nhận phần chia hoa hồng affiliate (thường phần lớn theo cấu hình site, ví dụ ~70% HH). Mức thực tế tùy ngành hàng — xem ước tính khi lấy link; số thật theo báo cáo Shopee.',
   },
   {
-    q: 'Bao lâu tiền vào ví?',
-    a: 'Sau khi đơn được ghi nhận và hết thời gian hold (mặc định vài ngày) để tránh đơn hủy. Rồi bạn rút về bank/MoMo.',
+    q: 'Hold hoàn tiền Shopee bao lâu?',
+    a: 'Thường khoảng 7 ngày sau khi đơn được ghi nhận, để giảm rủi ro hủy/hoàn. Hết hold, tiền vào số dư rút được (tối thiểu thường 50.000đ).',
   },
   {
-    q: 'Vì sao không thấy đơn?',
-    a: 'Thường do mua không qua link hoàn tiền, click link khác, để giỏ cũ, Adblock, hoặc hủy đặt lại. Hãy lấy link mới rồi mua lại.',
+    q: 'Vì sao không được hoàn tiền Shopee?',
+    a: 'Thường do mua không qua short link, click aff/KOL khác, giỏ cũ, Adblock, thanh toán chậm, hoặc hủy đặt lại. Hãy lấy link hoàn tiền mới và mua lại đúng quy trình.',
   },
   {
-    q: 'Rút tiền thế nào?',
-    a: 'Vào Rút tiền khi số dư đạt mức tối thiểu, nhập STK hoặc MoMo, gửi yêu cầu. Admin chuyển khoản.',
+    q: 'Cách rút tiền cashback Shopee về bank / MoMo?',
+    a: 'Khi số dư khả dụng đủ mức tối thiểu, vào Rút tiền trên web, nhập STK hoặc MoMo, gửi yêu cầu. Admin duyệt và chuyển khoản.',
   },
 ];
 
@@ -95,14 +95,15 @@ export default function Home() {
               Hoàn tiền Shopee · Miễn phí dùng
             </div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl leading-tight dark:text-white">
-              Mua Shopee —{' '}
+              Hoàn tiền Shopee —{' '}
               <span className="bg-gradient-to-r from-shopee to-brand-500 bg-clip-text text-transparent">
-                nhận tiền về ví
+                cashback về ví
               </span>
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base text-slate-600 leading-relaxed dark:text-slate-300 sm:text-lg">
-              Chỉ 3 bước: <b>dán link</b> → <b>copy link hoàn tiền</b> → <b>mua</b>.
-              Tiền vào ví sau đối soát. Mời bạn: F1 <b>{f1}%</b> · F2 <b>{f2}%</b>.
+              Web hoàn tiền Shopee uy tín: <b>dán link</b> → <b>lấy short link hoàn tiền</b> →{' '}
+              <b>mua</b>. Tiền vào ví sau đối soát, rút bank/MoMo. Mời bạn: F1 <b>{f1}%</b> · F2{' '}
+              <b>{f2}%</b>.
             </p>
           </div>
 
@@ -316,7 +317,9 @@ export default function Home() {
 
       {/* FAQ */}
       <section className="mx-auto max-w-3xl px-4 py-14">
-        <h2 className="text-center text-2xl font-extrabold">Câu hỏi thường gặp</h2>
+        <h2 className="text-center text-2xl font-extrabold">
+          Câu hỏi thường gặp về hoàn tiền Shopee
+        </h2>
         <div className="mt-8 space-y-2">
           {faqs.map((f, i) => (
             <div

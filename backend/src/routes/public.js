@@ -162,19 +162,21 @@ function toSitemapLastmod(value) {
 }
 
 router.get('/sitemap.xml', async (_req, res) => {
-  const base = (
-    getSetting('site_url', process.env.SITE_URL || 'https://hoantien.pro.vn')
+  // Prefer www (Vercel redirects apex → www) for consistent indexing
+  let base = (
+    getSetting('site_url', process.env.SITE_URL || 'https://www.hoantien.pro.vn')
   ).replace(/\/$/, '');
+  if (base === 'https://hoantien.pro.vn') base = 'https://www.hoantien.pro.vn';
 
   const staticPaths = [
     { path: '/', priority: '1.0', changefreq: 'daily' },
-    { path: '/guide', priority: '0.8', changefreq: 'weekly' },
-    { path: '/blog', priority: '0.8', changefreq: 'daily' },
-    { path: '/terms', priority: '0.4', changefreq: 'monthly' },
-    { path: '/privacy', priority: '0.4', changefreq: 'monthly' },
-    { path: '/cookies', priority: '0.3', changefreq: 'monthly' },
-    { path: '/login', priority: '0.5', changefreq: 'monthly' },
-    { path: '/register', priority: '0.6', changefreq: 'monthly' },
+    { path: '/guide', priority: '0.9', changefreq: 'weekly' },
+    { path: '/blog', priority: '0.9', changefreq: 'daily' },
+    { path: '/register', priority: '0.7', changefreq: 'monthly' },
+    { path: '/terms', priority: '0.3', changefreq: 'monthly' },
+    { path: '/privacy', priority: '0.3', changefreq: 'monthly' },
+    { path: '/cookies', priority: '0.2', changefreq: 'monthly' },
+    // login intentionally omitted — thin / noindex UX page
   ];
 
   let blogUrls = [];

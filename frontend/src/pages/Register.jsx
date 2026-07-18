@@ -70,7 +70,7 @@ export default function Register() {
   return (
     <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center px-4 py-12">
       <div className="card shadow-soft">
-        <h1 className="text-2xl font-extrabold">Đăng ký miễn phí</h1>
+        <h1 className="text-2xl font-extrabold">Đăng ký hoàn tiền Shopee miễn phí</h1>
         <p className="mt-1 text-sm text-slate-500">
           Tạo tài khoản để lấy link hoàn tiền và theo dõi ví
         </p>
