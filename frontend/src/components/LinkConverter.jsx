@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { formatPct, formatVnd, linksApi } from '../lib/api';
+import CashbackStepsAnim from './CashbackStepsAnim';
 
 /** Nhận diện nền tảng — TikTok/Lazada hiện chưa mở */
 function detectLinkPlatform(raw) {
@@ -78,13 +79,8 @@ export default function LinkConverter({ compact = false }) {
   return (
     <div className={compact ? '' : 'card shadow-soft border-orange-100'}>
       {!compact && (
-        <div className="mb-3">
-          <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">
-            ① Dán link → ② Copy link hoàn tiền → ③ Mua
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Copy link sản phẩm từ app Shopee (Chia sẻ → Sao chép) rồi dán vào đây.
-          </p>
+        <div className="mb-5 border-b border-orange-50 pb-5 dark:border-slate-800">
+          <CashbackStepsAnim />
         </div>
       )}
 

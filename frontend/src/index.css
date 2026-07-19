@@ -42,6 +42,22 @@ body {
     radial-gradient(ellipse 40% 40% at 100% 0%, rgba(249, 115, 22, 0.12), transparent);
 }
 
+/* Steps animation (cashback flow) */
+@keyframes step-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(238, 77, 45, 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(238, 77, 45, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(238, 77, 45, 0);
+  }
+}
+.step-pulse {
+  animation: step-pulse-ring 1.8s ease-out infinite;
+}
+
 .prose-blog h2 {
   @apply mt-6 mb-2 text-xl font-bold;
 }
