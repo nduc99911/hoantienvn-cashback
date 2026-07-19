@@ -229,7 +229,7 @@ async function seedDefaults() {
     f2_rate: process.env.F2_COMMISSION_RATE || '0.10',
     guide_video_url:
       process.env.GUIDE_VIDEO_URL ||
-      'https://hoantien.pro.vn/videos/huong-dan-hoan-tien.mp4',
+      'https://www.hoantien.pro.vn/videos/0719.mp4',
     support_facebook: process.env.SUPPORT_FACEBOOK || '',
     support_messenger: process.env.SUPPORT_MESSENGER || '',
     google_client_id: process.env.GOOGLE_CLIENT_ID || '',

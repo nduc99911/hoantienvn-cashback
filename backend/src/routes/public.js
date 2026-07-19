@@ -72,46 +72,36 @@ router.get('/config', (_req, res) => {
   });
 });
 
-/** Social proof stats */
+/**
+ * Social proof trên trang chủ — số FOMO (ảo) cho khách.
+ * Số thật chỉ ở Admin → KPI (/api/admin/stats).
+ * Có thể chỉnh base qua settings: fomo_clicks, fomo_members, fomo_paid, fomo_held
+ */
+function publicFomoStats() {
+  const daySeed = Math.floor(Date.now() / 86400000); // đổi nhẹ mỗi ngày
+  const n = (key, fallback) => {
+    const v = parseFloat(getSetting(key, String(fallback)));
+    return Number.isFinite(v) ? v : fallback;
+  };
+  const clicks = Math.round(n('fomo_clicks', 128640) + (daySeed % 97) * 23);
+  const members = Math.round(n('fomo_members', 8642) + (daySeed % 41) * 7);
+  const paid = Math.round(n('fomo_paid', 186500000) + (daySeed % 30) * 250000);
+  const held = Math.round(n('fomo_held', 42800000) + (daySeed % 20) * 180000);
+  return {
+    clicks,
+    members,
+    paidCashback: paid,
+    heldCashback: held,
+    totalCashback: paid + held,
+    displayOnly: true,
+  };
+}
+
 router.get('/stats', async (_req, res) => {
   try {
-    const clicks = Number(
-      (await one('SELECT COUNT(*) as c FROM click_logs'))?.c || 0
-    );
-    const users = Number(
-      (await one(
-        `SELECT COUNT(*) as c FROM users WHERE status = 'active' OR status IS NULL`
-      ))?.c || 0
-    );
-    const paid = Number(
-      (
-        await one(
-          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'paid'`
-        )
-      )?.s || 0
-    );
-    const held = Number(
-      (
-        await one(
-          `SELECT COALESCE(SUM(cashback_amount),0) as s FROM orders WHERE status = 'held'`
-        )
-      )?.s || 0
-    );
-    res.json({
-      clicks,
-      members: users,
-      paidCashback: paid,
-      heldCashback: held,
-      totalCashback: paid + held,
-    });
+    res.json(publicFomoStats());
   } catch (e) {
-    res.json({
-      clicks: 0,
-      members: 0,
-      paidCashback: 0,
-      heldCashback: 0,
-      totalCashback: 0,
-    });
+    res.json(publicFomoStats());
   }
 });
 

@@ -55,11 +55,12 @@ export default function Home() {
     setTimeout(() => setCopiedCode(''), 2000);
   }
 
+  // Video hướng dẫn mặc định: /videos/0719.mp4 (admin có thể ghi đè guide_video_url)
   const videoUrl =
     cfg?.guideVideoUrl ||
     (typeof window !== 'undefined'
-      ? `${window.location.origin}/videos/huong-dan-hoan-tien.mp4`
-      : '/videos/huong-dan-hoan-tien.mp4');
+      ? `${window.location.origin}/videos/0719.mp4`
+      : '/videos/0719.mp4');
   const ytId = videoUrl.match(/(?:youtu\.be\/|v=|embed\/)([\w-]{6,})/)?.[1];
   const isMp4 = /\.mp4($|\?)/i.test(videoUrl) || videoUrl.includes('/videos/');
 
@@ -262,7 +263,7 @@ export default function Home() {
       {/* Video hướng dẫn */}
       <section className="border-y border-slate-100 bg-white py-14 dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto max-w-6xl px-4">
-          <h2 className="text-center text-2xl font-extrabold">Xem video 1 phút</h2>
+          <h2 className="text-center text-2xl font-extrabold">Xem video hướng dẫn</h2>
           <p className="mx-auto mt-2 max-w-lg text-center text-sm text-slate-500">
             Cùng 3 bước như trên: dán link → copy → mua
           </p>
@@ -291,7 +292,7 @@ export default function Home() {
             </div>
           )}
           <p className="mt-3 text-center text-xs text-slate-400">
-            Video 3 bước · có thể thay bằng YouTube trong Admin → guide_video_url
+            Video hướng dẫn hoàn tiền · Admin có thể đổi URL (guide_video_url)
           </p>
         </div>
       </section>
