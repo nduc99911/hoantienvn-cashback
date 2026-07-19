@@ -5,10 +5,18 @@ import { useTheme } from '../context/ThemeContext';
 import { formatVnd, notifApi } from '../lib/api';
 
 const navCls = ({ isActive }) =>
-  `px-3 py-2 rounded-lg text-sm font-medium transition ${
+  `px-3 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${
     isActive
       ? 'bg-shopee/10 text-shopee'
       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+  }`;
+
+/** Mobile top strip — nhãn ngắn, không trùng, không cắt chữ */
+const mobileNavCls = ({ isActive }) =>
+  `shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold whitespace-nowrap transition ${
+    isActive
+      ? 'bg-shopee/10 text-shopee'
+      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
   }`;
 
 export default function Layout() {
@@ -165,10 +173,16 @@ export default function Layout() {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-secondary !py-2 !px-3 text-sm">
-                  Đăng nhập
+                <Link
+                  to="/login"
+                  className="btn-secondary !py-2 !px-2.5 text-xs sm:!px-3 sm:text-sm whitespace-nowrap"
+                >
+                  Vào
                 </Link>
-                <Link to="/register" className="btn-primary !py-2 !px-3 text-sm">
+                <Link
+                  to="/register"
+                  className="btn-primary !py-2 !px-2.5 text-xs sm:!px-3 sm:text-sm whitespace-nowrap"
+                >
                   Đăng ký
                 </Link>
               </>
@@ -177,21 +191,30 @@ export default function Layout() {
         </div>
 
         {user && (
-          <div className="flex gap-1 overflow-x-auto border-t border-slate-50 px-2 py-2 lg:hidden dark:border-slate-800">
-            <NavLink to="/dashboard" className={navCls}>
-              Ví
+          <div className="flex gap-1 overflow-x-auto border-t border-slate-50 px-2 py-2 scrollbar-hide lg:hidden dark:border-slate-800">
+            <NavLink to="/dashboard" className={mobileNavCls}>
+              Ví & link
             </NavLink>
-            <NavLink to="/claim" className={navCls}>
-              Đơn
+            <NavLink to="/orders" className={mobileNavCls}>
+              Đơn hàng
             </NavLink>
-            <NavLink to="/orders" className={navCls}>
-              Đơn
+            <NavLink to="/claim" className={mobileNavCls}>
+              Báo thiếu
             </NavLink>
-            <NavLink to="/withdraw" className={navCls}>
-              Rút
+            <NavLink to="/withdraw" className={mobileNavCls}>
+              Rút tiền
             </NavLink>
-            {user.role === 'admin' && (
-              <NavLink to="/admin" className={navCls}>
+            <NavLink to="/referrals" className={mobileNavCls}>
+              Mời bạn
+            </NavLink>
+            <NavLink to="/guide" className={mobileNavCls}>
+              Cách dùng
+            </NavLink>
+            {(user.role === 'admin' ||
+              user.role === 'super_admin' ||
+              user.role === 'finance' ||
+              user.role === 'support') && (
+              <NavLink to="/admin" className={mobileNavCls}>
                 Admin
               </NavLink>
             )}

@@ -42,6 +42,15 @@ body {
     radial-gradient(ellipse 40% 40% at 100% 0%, rgba(249, 115, 22, 0.12), transparent);
 }
 
+/* Hide scrollbar but keep swipe on mobile nav strips */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Steps animation (cashback flow) */
 @keyframes step-pulse-ring {
   0% {
