@@ -558,7 +558,18 @@ export async function analyzeProduct(rawUrl) {
   const platform = detectPlatform(url);
   if (!platform) {
     throw new Error(
-      'Link không hỗ trợ. Dùng link Shopee / TikTok Shop / Lazada'
+      'Link không hỗ trợ. Hiện chỉ nhận link Shopee (shopee.vn / s.shopee.vn / shope.ee).'
+    );
+  }
+  // Phase 1: chỉ Shopee — TikTok / Lazada báo đang phát triển
+  if (platform === 'tiktok') {
+    throw new Error(
+      'TikTok Shop đang phát triển — hiện chỉ hỗ trợ link Shopee. Vui lòng dán link sản phẩm Shopee.'
+    );
+  }
+  if (platform === 'lazada') {
+    throw new Error(
+      'Lazada đang phát triển — hiện chỉ hỗ trợ link Shopee. Vui lòng dán link sản phẩm Shopee.'
     );
   }
   if (getSetting(`enable_${platform}`, '1') !== '1') {
@@ -566,6 +577,7 @@ export async function analyzeProduct(rawUrl) {
   }
 
   if (platform === 'shopee') return analyzeShopeeProduct(url);
+  // Reserved for later when enable_tiktok / enable_lazada + product flow ready
   if (platform === 'tiktok') return analyzeGeneric(url, 'tiktok', 'TikTok Shop');
   return analyzeGeneric(url, 'lazada', 'Lazada');
 }

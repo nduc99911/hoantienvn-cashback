@@ -3,22 +3,45 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { formatPct, formatVnd, linksApi } from '../lib/api';
 
+/** Nhận diện nền tảng — TikTok/Lazada hiện chưa mở */
+function detectLinkPlatform(raw) {
+  const s = String(raw || '').toLowerCase();
+  if (/tiktok\.com|vt\.tiktok|tokopedia/.test(s)) return 'tiktok';
+  if (/lazada\./.test(s)) return 'lazada';
+  if (/shopee\.|shope\.ee|shp\.ee/.test(s)) return 'shopee';
+  return null;
+}
+
+const COMING_SOON = {
+  tiktok:
+    'TikTok Shop đang phát triển — hiện chỉ hỗ trợ link Shopee. Vui lòng dán link sản phẩm Shopee.',
+  lazada:
+    'Lazada đang phát triển — hiện chỉ hỗ trợ link Shopee. Vui lòng dán link sản phẩm Shopee.',
+};
+
 export default function LinkConverter({ compact = false }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState(''); // thông báo “đang phát triển” (không phải lỗi đỏ)
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setInfo('');
     setResult(null);
     setCopied(false);
     if (!url.trim()) {
       setError('Hãy dán link sản phẩm Shopee vào ô bên trên');
+      return;
+    }
+    const plat = detectLinkPlatform(url.trim());
+    if (plat === 'tiktok' || plat === 'lazada') {
+      setInfo(COMING_SOON[plat]);
       return;
     }
     if (!user) {
@@ -73,9 +96,13 @@ export default function LinkConverter({ compact = false }) {
           <input
             id="product-url"
             className="input flex-1 font-mono text-sm"
-            placeholder="Dán link Shopee tại đây..."
+            placeholder="Dán link Shopee tại đây (chưa hỗ trợ TikTok / Lazada)..."
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setInfo('');
+              setError('');
+            }}
             autoComplete="off"
             inputMode="url"
           />
@@ -87,6 +114,11 @@ export default function LinkConverter({ compact = false }) {
             {loading ? 'Đang xử lý...' : 'Lấy link hoàn tiền'}
           </button>
         </div>
+        {info && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            <b>🚧 Đang phát triển:</b> {info}
+          </div>
+        )}
         {error && (
           <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-950/40 dark:text-red-300">
             {error}
