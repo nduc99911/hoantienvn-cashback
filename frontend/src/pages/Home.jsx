@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import LinkConverter from '../components/LinkConverter';
 import TipsModal, { openTipsAgain } from '../components/TipsModal';
 import { formatVnd, publicApi, vouchersApi } from '../lib/api';
-import CommunityLinks from '../components/CommunityLinks';
 import GeoModules from '../components/GeoModules';
+import BotQuickBuy from '../components/BotQuickBuy';
 import { GEO_FAQ_ITEMS } from '../lib/geoContent';
 
 const steps = [
@@ -84,8 +84,8 @@ export default function Home() {
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base text-slate-600 leading-relaxed dark:text-slate-300 sm:text-lg">
               Web hoàn tiền Shopee uy tín: <b>dán link</b> → <b>lấy short link hoàn tiền</b> →{' '}
-              <b>mua</b>. Tiền vào ví sau đối soát, rút bank/MoMo. Mời bạn: F1 <b>{f1}%</b> · F2{' '}
-              <b>{f2}%</b>.
+              <b>mua</b>. Hoặc <b>dán link vào bot Telegram / Zalo</b> sau khi liên kết — mua
+              nhanh trên điện thoại. F1 <b>{f1}%</b> · F2 <b>{f2}%</b>.
             </p>
           </div>
 
@@ -129,12 +129,8 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="mt-8 flex flex-col items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              Bot & nhóm hỗ trợ
-            </p>
-            <CommunityLinks />
-          </div>
+          {/* Nổi bật: mua nhanh qua bot */}
+          <BotQuickBuy />
         </div>
       </section>
 

@@ -61,7 +61,7 @@ export default function FloatingSupport() {
   if (tg) {
     items.push({
       href: tg,
-      label: 'Tele',
+      label: 'Mua Tele',
       emoji: '✈️',
       cls: 'bg-[#229ED9]',
     });

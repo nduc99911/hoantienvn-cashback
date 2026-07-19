@@ -59,10 +59,11 @@ export default function CommunityLinks({
           href={tg}
           target="_blank"
           rel="noreferrer"
+          title="Dán link Shopee vào bot để lấy short link hoàn tiền"
           className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-sky-600"
         >
           <span>✈️</span>
-          {showLabels && <span>{tgLabel}</span>}
+          {showLabels && <span>Mua nhanh · {tgLabel}</span>}
         </a>
       )}
       {zg && (
@@ -70,10 +71,11 @@ export default function CommunityLinks({
           href={zg}
           target="_blank"
           rel="noreferrer"
+          title="Nhóm Zalo — tip deal & hỗ trợ hoàn tiền"
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-blue-700"
         >
           <span>💬</span>
-          {showLabels && <span>Nhóm Zalo</span>}
+          {showLabels && <span>Zalo · hỏi đáp & deal</span>}
         </a>
       )}
     </div>
