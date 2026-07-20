@@ -706,14 +706,16 @@ router.get('/clicks', async (_req, res) => {
 });
 
 router.get('/users', async (_req, res) => {
+  const { generateSubId } = await import('../services/affiliate.js');
   const users = await many(
-    `SELECT id, email, name, role, status, balance, pending_balance, held_balance,
+    `SELECT id, email, phone, name, role, status, balance, pending_balance, held_balance,
             referral_code, created_at FROM users ORDER BY id DESC LIMIT 200`
   );
   res.json({
     users: users.map((u) => ({
       id: u.id,
       email: u.email,
+      phone: u.phone || null,
       name: u.name,
       role: u.role,
       status: u.status,
@@ -721,6 +723,8 @@ router.get('/users', async (_req, res) => {
       pendingBalance: u.pending_balance,
       heldBalance: u.held_balance,
       referralCode: u.referral_code,
+      /** Mã sub_id gắn link aff — dễ đối soát CSV */
+      affSubId: generateSubId(u),
       createdAt: u.created_at,
     })),
   });
