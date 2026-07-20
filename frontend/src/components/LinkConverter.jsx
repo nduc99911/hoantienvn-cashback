@@ -192,12 +192,13 @@ export default function LinkConverter({ compact = false }) {
           ) : (
             <div className="border-t border-orange-100 bg-white/70 px-4 py-4 space-y-4 dark:border-slate-700 dark:bg-slate-800/50">
               <div className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                <b>Bước tiếp theo:</b> Copy link → mở Shopee → mua trong{' '}
-                <b>20–30 phút</b>. Không cần khai báo đơn.
+                <b>Bước tiếp theo:</b> Bấm <b>Mua ngay</b> (short link) hoặc copy short
+                link → mở Shopee → mua trong <b>20–30 phút</b>. Short link mới ghi lượt
+                click để đối soát.
               </div>
               <div>
                 <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Link hoàn tiền của bạn
+                  Short link hoàn tiền (dùng link này để mua)
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <input
@@ -207,10 +208,10 @@ export default function LinkConverter({ compact = false }) {
                     onFocus={(e) => e.target.select()}
                   />
                   <button type="button" className="btn-secondary" onClick={copyLink}>
-                    {copied ? '✓ Đã copy' : 'Copy link'}
+                    {copied ? '✓ Đã copy' : 'Copy short link'}
                   </button>
                   <a
-                    href={result.affiliateUrl || result.shortUrl}
+                    href={result.shortUrl || result.affiliateUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="btn-primary text-center"
@@ -218,6 +219,11 @@ export default function LinkConverter({ compact = false }) {
                     Mua ngay trên Shopee
                   </a>
                 </div>
+                {!result.shortUrl && result.affiliateUrl && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    Chưa có short link — mở link aff trực tiếp sẽ không ghi click hệ thống.
+                  </p>
+                )}
               </div>
               {result.subId && (
                 <p className="text-xs text-slate-400">

@@ -153,9 +153,8 @@ async function cmdLink(user, url) {
     `${priceLine}\n` +
     `${cashLine}\n` +
     `🏷 sub_id: ${subId}\n\n` +
-    `🔗 Mua ngay:\n${outbound}\n\n` +
-    `📎 Short: ${short}\n\n` +
-    `⚠️ Click link → mua trong 20–30 phút.`
+    `🔗 Mua ngay (short link):\n${short}\n\n` +
+    `⚠️ Bấm short link mới ghi click. Mua trong 20–30 phút.`
   );
 }
 

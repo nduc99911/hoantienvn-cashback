@@ -162,7 +162,7 @@ router.post('/convert', requireAuth, limitConvert, async (req, res) => {
       sales: result.sales ?? null,
       priceUnknown: Boolean(result.priceUnknown),
       noApi: true,
-      tip: 'Mở short link / an_redir để mua. Sau nhận hàng → Khai báo mã đơn.',
+      tip: 'Mở SHORT link (nút Mua ngay) để ghi click + tracking. Không mở link aff dài trực tiếp.',
     });
   } catch (e) {
     console.error(e);
@@ -175,10 +175,12 @@ router.get('/mine', requireAuth, async (req, res) => {
     `SELECT * FROM cashback_links WHERE user_id = ? ORDER BY created_at DESC LIMIT 50`,
     [req.user.id]
   );
+  const { shortLinkUrl } = await import('../utils/urls.js');
   res.json({
     links: links.map((l) => ({
       id: l.id,
       shortCode: l.short_code,
+      shortUrl: l.short_code ? shortLinkUrl(l.short_code) : null,
       originalUrl: l.original_url,
       affiliateUrl: l.affiliate_url,
       subId: l.sub_id,

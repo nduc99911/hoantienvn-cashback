@@ -606,12 +606,13 @@ export default function Dashboard() {
                     <span>Hoàn {formatVnd(l.estimatedCashback)}</span>
                     <span>· {l.clicks} clicks</span>
                     <a
-                      href={l.affiliateUrl}
+                      href={l.shortUrl || l.affiliateUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="text-shopee font-semibold hover:underline"
+                      title="Mở short link để ghi click"
                     >
-                      Mở link
+                      Mua ngay
                     </a>
                   </div>
                 </li>
