@@ -51,7 +51,7 @@ export default function Register() {
       await register({
         name: form.name,
         email: form.email,
-        phone: form.phone,
+        phone: form.phone?.trim() || undefined,
         password: form.password,
         referralCode: form.referralCode,
         captchaToken: captcha.token,
@@ -72,7 +72,8 @@ export default function Register() {
       <div className="card shadow-soft">
         <h1 className="text-2xl font-extrabold">Đăng ký hoàn tiền Shopee miễn phí</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Tạo tài khoản để lấy link hoàn tiền và theo dõi ví
+          Chỉ cần email + mật khẩu. Số điện thoại là tuỳ chọn — không bắt buộc, không
+          công khai.
         </p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4" autoComplete="off">
           {/* Honeypot — ẩn khỏi user, bot hay điền */}
@@ -108,22 +109,40 @@ export default function Register() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Email</label>
+            <label className="mb-1 block text-sm font-medium">
+              Email <span className="text-shopee">*</span>
+            </label>
             <input
               className="input"
               type="email"
               value={form.email}
               onChange={(e) => set('email', e.target.value)}
               required
+              autoComplete="email"
+              placeholder="dung-de-dang-nhap@email.com"
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Dùng đăng nhập và khôi phục mật khẩu (không công khai trên web).
+            </p>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Số điện thoại</label>
+            <label className="mb-1 block text-sm font-medium">
+              Số điện thoại{' '}
+              <span className="font-normal text-slate-400">(tuỳ chọn)</span>
+            </label>
             <input
               className="input"
+              type="tel"
+              inputMode="tel"
               value={form.phone}
               onChange={(e) => set('phone', e.target.value)}
+              autoComplete="tel"
+              placeholder="Để trống nếu không muốn lưu SĐT"
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Không bắt buộc. Chỉ admin hỗ trợ / rút MoMo mới có thể thấy — không hiển
+              thị công khai cho người khác.
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">Mật khẩu</label>
