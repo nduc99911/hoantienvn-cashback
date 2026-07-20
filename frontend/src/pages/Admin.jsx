@@ -1486,7 +1486,7 @@ export default function Admin() {
             ['default_commission_rate', '% HH mặc định'],
             ['f1_rate', 'F1 rate'],
             ['f2_rate', 'F2 rate'],
-            ['min_withdraw', 'Min rút'],
+            ['min_withdraw', 'Min rút (VNĐ, vd 20000) — trang Rút tiền + API'],
             ['max_claims_per_day', 'Max claim/ngày'],
             ['require_click_before_claim', 'Require click (0/1)'],
             ['hard_block_no_click', 'Block cứng không click (0/1)'],

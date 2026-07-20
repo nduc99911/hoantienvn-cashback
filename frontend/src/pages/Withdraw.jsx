@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { authApi, formatVnd, walletApi } from '../lib/api';
+import { authApi, formatVnd, publicApi, walletApi } from '../lib/api';
 
 export default function Withdraw() {
   const { user, refresh, setUser } = useAuth();
@@ -14,9 +14,18 @@ export default function Withdraw() {
   const [error, setError] = useState('');
   const [ok, setOk] = useState('');
   const [loading, setLoading] = useState(false);
+  /** Lấy từ Admin → min_withdraw (public config) */
+  const [minWithdraw, setMinWithdraw] = useState(50000);
 
   useEffect(() => {
     walletApi.withdrawals().then((d) => setList(d.withdrawals)).catch(console.error);
+    publicApi
+      .config()
+      .then((c) => {
+        const m = Number(c.minWithdraw);
+        if (Number.isFinite(m) && m > 0) setMinWithdraw(m);
+      })
+      .catch(() => {});
   }, []);
 
   async function onSubmit(e) {
@@ -61,7 +70,7 @@ export default function Withdraw() {
         <p className="mt-1 text-sm text-slate-500">
           Số dư khả dụng:{' '}
           <b className="text-emerald-600 text-lg">{formatVnd(user?.balance)}</b>
-          {' · '}Tối thiểu 50.000đ
+          {' · '}Tối thiểu {formatVnd(minWithdraw)}
         </p>
       </div>
 
@@ -72,13 +81,16 @@ export default function Withdraw() {
             <input
               className="input"
               type="number"
-              min={50000}
+              min={minWithdraw}
               step={1000}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder="50000"
+              placeholder={String(minWithdraw)}
               required
             />
+            <p className="mt-1 text-xs text-slate-400">
+              Mức tối thiểu do admin cấu hình: {formatVnd(minWithdraw)}
+            </p>
           </div>
 
           <div>
